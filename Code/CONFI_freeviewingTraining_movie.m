@@ -8,6 +8,11 @@ function cclab = CONFI_freeviewingTraining_movie()
 % 0 => real EyeLink tracking 
 % 1 => dummy mode using mouse input
 cclab.dummymode      = 1;
+cclab.os_mac = 1; 
+
+if cclab.dummymode == 1
+    SkipSyncTests = 1;
+    Screen('Preference', 'SkipSyncTests', 1);
 
 %% Seeding for Randomization
 % Set to true to use the fixed seed below, ensuring the same 
@@ -19,7 +24,11 @@ cclab.randomSeed   = 1; % 1 for Vennie
 %% Filepath
 % The folder below must contain the subfolders 'Videos', 'Nature_videos',
 % 'Social_directed_videos', and 'Social_notdirected_videos'
-cclab.filepath = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos';
+if cclab.os_mac == 0
+    cclab.filepath = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos';
+else 
+    cclab.filepath = '/Users/q/Documents/Code/Research/CogCtrlLab/Video project';
+end
 
 %% Block size
 cclab.practiceBlockSize = 0; % Number of practice trials (I always had this set to 0, not sure if movie code will work if it's set to something else)

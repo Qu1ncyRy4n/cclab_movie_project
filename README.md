@@ -165,3 +165,56 @@ MATLAB opaque object — **scipy/Python cannot read it**; open in MATLAB
 - Reward only gated on phase-1 fixation, not full movie watch.
 - Success counter `total_success` gates session end, but aborted trials still
   increment `total_trials` and get logged.
+
+## Quickstart (MATLAB newcomers)
+
+**Note:** this is a **MATLAB + Psychtoolbox** task, not Python/PsychoPy. You run
+it inside MATLAB, not from a terminal.
+
+### One-time setup
+1. Install **MATLAB** (any recent version).
+2. Install **Psychtoolbox** — http://psychtoolbox.org/download.html. This is the
+   engine that draws to the screen and plays movies.
+3. For real eye-tracking: install the **EyeLink Developers Kit** (SR Research)
+   and the lab's `cclab-matlab-tools` (for `cclabReward` / `cclabInitDIO`). Not
+   needed for mouse testing.
+
+### Run it in mouse-test mode (no rig, no monkey)
+Do this first to see the task work on your own laptop.
+
+1. Open MATLAB.
+2. In the **Current Folder** panel (or `cd` in the Command Window), navigate to
+   the `Code/` folder of this project so it's the working directory.
+3. Open `CONFI_freeviewingTraining_movie.m` in the editor. Set:
+   - `dummymode = 1;`  → gaze follows your **mouse** instead of an eye tracker.
+   - `filepath` → point at a folder of `.mpg` movies you can access (the NAS path
+     won't work off the lab network). Needs the `Videos/`, `Nature_videos/`,
+     `Social_directed_videos/`, `Social_notdirected_videos/` subfolders.
+   - `moviespertype = 1;` → short session while testing.
+   Save the file (Ctrl/Cmd-S).
+4. In the Command Window, type the run command **without** `.m` and press Enter:
+   ```matlab
+   RUN_freeviewingTraining_movie
+   ```
+5. A dialog asks for a subject ID (≤8 chars, e.g. `test`) — this names the output
+   file. Type it, click OK.
+6. The task window opens. Move the mouse into the fixation dot to "fixate", hold,
+   then the movie plays.
+7. Controls: `ESC` = quit, `PageUp` = pause, `PageDown` = resume.
+
+### Common first-run problems
+- **`Undefined function 'RUN_...'`** → you're not in the `Code/` folder. `cd`
+  there, or add it to the path (right-click folder → *Add to Path*).
+- **`Screen()` / Psychtoolbox errors, or a red screen** → PTB timing tests
+  failing on a laptop. In CONFI set `SkipSyncTests = 1;` (testing only — never on
+  the real rig).
+- **Reward-image error** → the reward `.png` must be in the working directory;
+  run from `Code/` where the images live.
+- **Movie won't load** → `filepath` wrong, or missing the category subfolders, or
+  files aren't `.mpg`.
+
+### Going to the real rig
+Flip `dummymode = 0;`, connect the EyeLink Host PC, set `SkipSyncTests = 0;`, and
+point `filepath` at the NAS. On start it runs camera setup + 9-point calibration
+before trials. See **How to run** above for the full rig checklist.
+  increment `total_trials` and get logged.

@@ -6,6 +6,8 @@ function RUN_freeviewingTraining_movie()
 clear all
 close all
 
+useRealEyelink = false;  % ponytail: default so the catch handler can't crash before line 109 sets it
+
 try
     %% 1) Load config
     cclab = CONFI_freeviewingTraining_movie();
@@ -133,9 +135,9 @@ try
     % --- Part 1: Load and shuffle PRACTICE images --- -- NOTE: Other than changing line 134, I actually didn't use 
     % practice movies at all when coding up the movie-watching paradigm (SN 3/19/26)
     %practiceMovieDir = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\Videos'; % TO DO- add practive movies?
-    practiceMovieDir = strcat(cclab.filepath, '\Videos');
+    practiceMovieDir = fullfile(cclab.filepath, 'Videos');
     %practiceImageDir = fullfile(pwd, 'images', 'practice');
-    if ~exist(practiceMovieDir, 'dir')
+    if ~exist(practiceMovieDir, 'dir') && cclab.practiceBlockSize > 0 
         error('Practice movie directory not found: %s', practiceMovieDir);
     end
     practiceMpgFiles = dir(fullfile(practiceMovieDir,'*.mpg'));
@@ -196,7 +198,7 @@ try
             movieFolder = practiceMovieDir;
         else
             %mainMovieDir = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\Videos';
-            mainMovieDir = strcat(cclab.filepath, '\Videos');
+            mainMovieDir = fullfile(cclab.filepath, 'Videos');
             movieFolder = mainMovieDir;
         end
 
