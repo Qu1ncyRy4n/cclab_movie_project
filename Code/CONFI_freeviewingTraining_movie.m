@@ -22,12 +22,31 @@ cclab.useFixedSeed = false;
 cclab.randomSeed   = 1; % 1 for Vennie
 
 %% Filepath
-% The folder below must contain the subfolders 'Videos', 'Nature_videos',
-% 'Social_directed_videos', and 'Social_notdirected_videos'
-if cclab.os_mac == 0
-    cclab.filepath = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos';
-else 
-    cclab.filepath = '/Users/q/Documents/Code/Research/CogCtrlLab/Video project';
+% The folder must contain: Videos/, Nature_videos/, Social_directed_videos/,
+% Social_notdirected_videos/. Set your local path in paths.cfg (copy from
+% paths.cfg.template in the repo root — it's gitignored so edits stay local).
+pathsCfg = fullfile(fileparts(mfilename('fullpath')), '..', 'paths.cfg');
+if exist(pathsCfg, 'file')
+    fid = fopen(pathsCfg, 'r');
+    cclab.filepath = '';
+    while true
+        line = fgetl(fid);
+        if ~ischar(line), break; end
+        line = strtrim(line);
+        if isempty(line) || line(1) == '#', continue; end
+        eqIdx = strfind(line, '=');
+        if ~isempty(eqIdx) && strcmp(strtrim(line(1:eqIdx(1)-1)), 'filepath')
+            cclab.filepath = strtrim(line(eqIdx(1)+1:end));
+        end
+    end
+    fclose(fid);
+else
+    % Fallback defaults — create paths.cfg from paths.example.cfg to override
+    if cclab.os_mac == 0
+        cclab.filepath = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos';
+    else
+        cclab.filepath = '/Volumes/cclab/shared/Bliss-Moreau_Machado_Videos';
+    end
 end
 
 %% Block size

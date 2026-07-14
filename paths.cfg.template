@@ -1,0 +1,36 @@
+# paths.cfg.template — tracked template for local video path config
+# -----------------------------------------------------------------
+# Added 2026-07-14: videos are too large for git and live on the lab NAS,
+# so each user keeps a gitignored paths.cfg with their local mount path.
+#
+# Copy this file to paths.cfg (same directory) and set filepath below.
+# CONFI_freeviewingTraining_movie.m reads paths.cfg automatically at startup.
+#
+#
+# HOW TO MOUNT THE NAS
+# --------------------
+# Videos live at: \\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos
+#
+# Windows
+#   Use the UNC path directly (no mounting needed):
+#     filepath = \\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos
+#   Or map a drive: File Explorer → "Map network drive" →
+#     \\cns-nas.ucdavis.edu\cclab\shared, then use the assigned letter, e.g.:
+#     filepath = Z:\Bliss-Moreau_Machado_Videos
+#
+# Mac
+#   Finder → Go → Connect to Server (Cmd-K) → smb://cns-nas.ucdavis.edu/cclab
+#   The share mounts at /Volumes/cclab. Set:
+#     filepath = /Volumes/cclab/shared/Bliss-Moreau_Machado_Videos
+#
+# Linux
+#   sudo mount -t cifs //cns-nas.ucdavis.edu/cclab /mnt/cclab \
+#     -o username=YOUR_CAS_LOGIN,vers=3.0
+#   Set:
+#     filepath = /mnt/cclab/shared/Bliss-Moreau_Machado_Videos
+#
+#
+# REQUIRED SUBFOLDERS inside filepath:
+#   Videos/  Nature_videos/  Social_directed_videos/  Social_notdirected_videos/
+
+filepath = \\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos
