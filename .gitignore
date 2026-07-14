@@ -2,8 +2,9 @@
 Output_freeviewingTraining/
 paths.cfg
 
-Boundary_videos
-clipped_videos
-Nature_videos
-Social_directed_videos
-Social_notdirected_videos
+video_ebm_dataset/video_all/
+video_ebm_dataset/video_nature/
+video_ebm_dataset/video_social_directed/
+video_ebm_dataset/video_social_undir/
+video_ebm_dataset/video_boundary/
+video_ebm_dataset/video_clipped/
