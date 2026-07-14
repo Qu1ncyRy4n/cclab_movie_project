@@ -134,8 +134,8 @@ try
     %% 7) Load the movies for free viewing
     % --- Part 1: Load and shuffle PRACTICE images --- -- NOTE: Other than changing line 134, I actually didn't use 
     % practice movies at all when coding up the movie-watching paradigm (SN 3/19/26)
-    %practiceMovieDir = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\Videos'; % TO DO- add practive movies?
-    practiceMovieDir = fullfile(cclab.filepath, 'Videos');
+    %practiceMovieDir = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_all'; % TO DO- add practice movies?
+    practiceMovieDir = fullfile(cclab.filepath, 'video_all');
     %practiceImageDir = fullfile(pwd, 'images', 'practice');
     if ~exist(practiceMovieDir, 'dir') && cclab.practiceBlockSize > 0 
         error('Practice movie directory not found: %s', practiceMovieDir);
@@ -197,8 +197,8 @@ try
         if i <= practiceBlockSize
             movieFolder = practiceMovieDir;
         else
-            %mainMovieDir = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\Videos';
-            mainMovieDir = fullfile(cclab.filepath, 'Videos');
+            %mainMovieDir = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_all';
+            mainMovieDir = fullfile(cclab.filepath, 'video_all');
             movieFolder = mainMovieDir;
         end
 

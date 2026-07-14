@@ -1,28 +1,28 @@
 function interleaved_movies = pseudorandomization(n_per_category, filepath)
 %  This function produces a list of movies of length 3 * n_per_category. The first three movies contain one nature video, one
-%  socially directed video, and one social nondirected video, presented in a random order. The same is true for the next group 
+%  socially directed video, and one social nondirected video, presented in a random order. The same is true for the next group
 %  of three movies, and so forth.
 
 % Randomly select n_category movies from each folder
-%natureMovieDir = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\Nature_videos';
-natureMovieDir = strcat(filepath, '\Nature_videos');
+%natureMovieDir = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_nature';
+natureMovieDir = fullfile(filepath, 'video_nature');
 natureMpgFiles = dir(fullfile(natureMovieDir,'*.mpg'));
 selectedNatureIndices = randperm(numel(natureMpgFiles), n_per_category);
 selectedNatureMovies = natureMpgFiles(selectedNatureIndices);
 
-%directedMovieDir = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\Social_directed_videos';
-directedMovieDir = strcat(filepath, '\Social_directed_videos');
+%directedMovieDir = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_social_directed';
+directedMovieDir = fullfile(filepath, 'video_social_directed');
 directedMpgFiles = dir(fullfile(directedMovieDir,'*.mpg'));
 selectedDirectedIndices = randperm(numel(directedMpgFiles), n_per_category);
 selectedDirectedMovies = directedMpgFiles(selectedDirectedIndices);
 
-%notdirectedMovieDir = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\Social_notdirected_videos';
-notdirectedMovieDir = strcat(filepath, '\Social_notdirected_videos');
+%notdirectedMovieDir = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_social_undir';
+notdirectedMovieDir = fullfile(filepath, 'video_social_undir');
 notdirectedMpgFiles = dir(fullfile(notdirectedMovieDir,'*.mpg'));
 selectedNotdirectedIndices = randperm(numel(notdirectedMpgFiles), n_per_category);
 selectedNotdirectedMovies = notdirectedMpgFiles(selectedNotdirectedIndices);
 
-%boundaryMovieDir = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\Boundary_videos';
+%boundaryMovieDir = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_boundary';
 %boundaryMpgFiles = dir(fullfile(boundaryMovieDir,'*.mp4'));
 %selectedBoundaryIndices = randperm(numel(boundaryMpgFiles), n_per_category);
 %selectedBoundaryMovies = notdirectedMpgFiles(selectedBoundaryIndices);
@@ -38,7 +38,7 @@ for i = 1:n_per_category
     % Append to overall movie order
     start_ind = (i-1)*3 + 1;
     interleaved_movies(start_ind:start_ind+2) = rand_movies;
- 
+
 end
 
 return

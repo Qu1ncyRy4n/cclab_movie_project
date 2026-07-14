@@ -23,8 +23,9 @@ cclab.useFixedSeed = false;
 cclab.randomSeed   = 1; % 1 for Vennie
 
 %% Filepath
-% The folder must contain: Videos/, Nature_videos/, Social_directed_videos/,
-% Social_notdirected_videos/. Set your local path in paths.cfg (copy from
+% The folder must point to video_ebm_dataset/ and contain:
+% video_all/, video_nature/, video_social_directed/, video_social_undir/.
+% Set your local path in paths.cfg (copy from
 % paths.cfg.template in the repo root — it's gitignored so edits stay local).
 pathsCfg = fullfile(fileparts(mfilename('fullpath')), '..', 'paths.cfg');
 if exist(pathsCfg, 'file')
@@ -44,11 +45,11 @@ if exist(pathsCfg, 'file')
 else
     % Fallback defaults — create paths.cfg from paths.cfg.template to override
     if cclab.operating_system == "MacOS"
-        cclab.filepath = '/Volumes/cclab/shared/Bliss-Moreau_Machado_Videos';
+        cclab.filepath = '/Volumes/cclab/shared/Bliss-Moreau_Machado_Videos/video_ebm_dataset';
     elseif cclab.operating_system == "Linux"
-        cclab.filepath = '/mnt/cclab/shared/Bliss-Moreau_Machado_Videos';
+        cclab.filepath = '/mnt/cclab/shared/Bliss-Moreau_Machado_Videos/video_ebm_dataset';
     else % Windows
-        cclab.filepath = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos';
+        cclab.filepath = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset';
     end
 end
 
