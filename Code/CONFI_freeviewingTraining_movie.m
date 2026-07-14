@@ -101,7 +101,8 @@ cclab.ScreenNumber  = 0;
 % [width height] in pixels of the display window (set [0 0] for full screen)
 cclab.screenSize    = [1080 720];
 % Whether to skip PTB sync tests (0 = normal, 1 = skip; skip can reduce timing accuracy)
-cclab.SkipSyncTests = 0;
+% Forced on in dummymode — sync tests fail on non-rig displays
+cclab.SkipSyncTests = cclab.dummymode;
 
 % Viewing distance from the monkey's eyes to the screen (cm)
 cclab.obs_dist     = 80;
@@ -109,7 +110,7 @@ cclab.obs_dist     = 80;
 cclab.screenWidth  = 60;
 
 %% Rig / Reward Image
-addpath(fullfile(fileparts(pwd), 'cclab-matlab-tools')) % commented out SN
+addpath(fullfile(fileparts(mfilename('fullpath')), 'cclab-matlab-tools'))
 %2/13
 
 % Which rig is being used ('Isaac', 'Wennie', etc.) — determines which reward image is loaded

@@ -13,17 +13,22 @@ Video project/
 │   ├── CONFI_freeviewingTraining_movie.m ← all params
 │   ├── pseudorandomization.m             ← movie-order picker
 │   ├── isaac_reward.png / wennie_reward.png  ← reward-screen images
+│   └── cclab-matlab-tools/               ← lab MATLAB utilities (git submodule)
 ├── Pilot data/demo_2026-03-05_1439/
 │   ├── demo_2026-03-05_1439.mat          ← Results table + config
 │   └── demo.edf                          ← raw EyeLink recording (9.4 MB)
+├── paths.cfg.template                    ← copy to paths.cfg and set your NAS mount
 └── readme_snovik.docx                    ← original rotation notes
 ```
 
 **Movies are NOT in this repo.** They live on the lab NAS:
 `\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos`, which must
 contain subfolders `Videos/`, `Nature_videos/`, `Social_directed_videos/`,
-`Social_notdirected_videos/`. All `.mpg` files. Set `cclab.filepath` to point
-there.
+`Social_notdirected_videos/`. All `.mpg` files.
+
+To set your local path: copy `paths.cfg.template` → `paths.cfg` (gitignored)
+and set the `filepath` line to your NAS mount. See the template for per-OS
+mounting instructions. `CONFI_` reads `paths.cfg` automatically at startup.
 
 ## How to run
 
@@ -91,8 +96,9 @@ interleave. Practice-movie path exists in RUN_ but was never used
 | Param | Pilot / default | Meaning |
 |---|---|---|
 | `dummymode` | 1 (code) / 0 (pilot ran real) | 0=EyeLink, 1=mouse |
+| `operating_system` | "Windows11" | "MacOS" / "Linux" / "Windows11" — sets NAS fallback path if no paths.cfg |
 | `useFixedSeed` / `randomSeed` | false / 1 | reproducible movie order |
-| `filepath` | NAS path above | movie root |
+| `filepath` | read from paths.cfg | movie root (auto-loaded; falls back to OS default) |
 | `practiceBlockSize` | 0 | practice trials (keep 0) |
 | `moviespertype` | 2 (code) / 3 (pilot) | movies per category → total = 3× |
 | `t_waitfixation_fp` | 5 s | max time to acquire fixation |
@@ -108,7 +114,7 @@ interleave. Practice-movie path exists in RUN_ but was never used
 | `randreward`/`randper` | false / 0.8 | randomly double reward |
 | `ScreenNumber` | 0 (pilot 1) | PTB display |
 | `screenSize` | [1080 720] (pilot [0 0]=fullscreen) | window px |
-| `SkipSyncTests` | 0 (pilot 1) | PTB timing test skip |
+| `SkipSyncTests` | = dummymode (auto) | PTB timing test skip — auto-enabled in dummymode since dev displays fail sync |
 | `obs_dist`/`screenWidth` | 80 / 60 cm | geometry for ppd |
 | `whichMonkey` | Isaac | selects reward png |
 | `rewardImageDimDeg` | 6 deg | reward image size |
@@ -187,9 +193,10 @@ Do this first to see the task work on your own laptop.
    the `Code/` folder of this project so it's the working directory.
 3. Open `CONFI_freeviewingTraining_movie.m` in the editor. Set:
    - `dummymode = 1;`  → gaze follows your **mouse** instead of an eye tracker.
-   - `filepath` → point at a folder of `.mpg` movies you can access (the NAS path
-     won't work off the lab network). Needs the `Videos/`, `Nature_videos/`,
-     `Social_directed_videos/`, `Social_notdirected_videos/` subfolders.
+   - Copy `paths.cfg.template` → `paths.cfg` in the repo root and set `filepath`
+     to a local folder of `.mpg` files (the NAS path won't work off the lab
+     network). Needs `Videos/`, `Nature_videos/`, `Social_directed_videos/`,
+     `Social_notdirected_videos/` subfolders.
    - `moviespertype = 1;` → short session while testing.
    Save the file (Ctrl/Cmd-S).
 4. In the Command Window, type the run command **without** `.m` and press Enter:
