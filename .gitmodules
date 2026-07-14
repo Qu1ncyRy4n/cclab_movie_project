@@ -1,0 +1,3 @@
+[submodule "cclab-matlab-tools"]
+	path = cclab-matlab-tools
+	url = git@github.com:Qu1ncyRy4n/cclab-matlab-tools
