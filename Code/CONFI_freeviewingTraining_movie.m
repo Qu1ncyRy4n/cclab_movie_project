@@ -8,11 +8,12 @@ function cclab = CONFI_freeviewingTraining_movie()
 % 0 => real EyeLink tracking 
 % 1 => dummy mode using mouse input
 cclab.dummymode      = 1;
-cclab.os_mac = 1; 
+cclab.operating_system = "Windows11"; 
 
 if cclab.dummymode == 1
     SkipSyncTests = 1;
     Screen('Preference', 'SkipSyncTests', 1);
+end
 
 %% Seeding for Randomization
 % Set to true to use the fixed seed below, ensuring the same 
@@ -41,11 +42,13 @@ if exist(pathsCfg, 'file')
     end
     fclose(fid);
 else
-    % Fallback defaults — create paths.cfg from paths.example.cfg to override
-    if cclab.os_mac == 0
-        cclab.filepath = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos';
-    else
+    % Fallback defaults — create paths.cfg from paths.cfg.template to override
+    if cclab.operating_system == "MacOS"
         cclab.filepath = '/Volumes/cclab/shared/Bliss-Moreau_Machado_Videos';
+    elseif cclab.operating_system == "Linux"
+        cclab.filepath = '/mnt/cclab/shared/Bliss-Moreau_Machado_Videos';
+    else % Windows
+        cclab.filepath = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos';
     end
 end
 
@@ -106,7 +109,7 @@ cclab.obs_dist     = 80;
 cclab.screenWidth  = 60;
 
 %% Rig / Reward Image
-%addpath(fullfile(fileparts(pwd), 'cclab-matlab-tools')) % commented out SN
+addpath(fullfile(fileparts(pwd), 'cclab-matlab-tools')) % commented out SN
 %2/13
 
 % Which rig is being used ('Isaac', 'Wennie', etc.) — determines which reward image is loaded
