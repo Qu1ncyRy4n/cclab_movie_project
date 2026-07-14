@@ -14,21 +14,34 @@ Video project/
 │   ├── pseudorandomization.m             ← movie-order picker
 │   ├── isaac_reward.png / wennie_reward.png  ← reward-screen images
 │   └── cclab-matlab-tools/               ← lab MATLAB utilities (git submodule)
-├── Pilot data/demo_2026-03-05_1439/
-│   ├── demo_2026-03-05_1439.mat          ← Results table + config
-│   └── demo.edf                          ← raw EyeLink recording (9.4 MB)
+├── Data/
+│   └── Pilot data/demo_2026-03-05_1439/
+│       ├── demo_2026-03-05_1439.mat      ← Results table + config
+│       └── demo.edf                      ← raw EyeLink recording (9.4 MB)
+├── video_ebm_dataset/                    ← dataset metadata (videos gitignored)
+│   ├── dataset_licensing_citation.md     ← license + required citations
+│   ├── MANIFEST.csv                      ← expected files per subfolder (for verification)
+│   ├── Machado et al. 2011 Video Content.csv
+│   ├── Bliss-Moreau, Machado, & Amaral, 2013 Video Rating.csv
+│   ├── video_all/    (gitignored — 1200 .mpg files)
+│   ├── video_nature/ (gitignored)
+│   ├── video_social_directed/ (gitignored)
+│   ├── video_social_undir/    (gitignored)
+│   ├── video_boundary/        (gitignored)
+│   └── video_clipped/         (gitignored)
 ├── paths.cfg.template                    ← copy to paths.cfg and set your NAS mount
 └── readme_snovik.docx                    ← original rotation notes
 ```
 
-**Movies are NOT in this repo.** They live on the lab NAS:
-`\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos`, which must
-contain subfolders `Videos/`, `Nature_videos/`, `Social_directed_videos/`,
-`Social_notdirected_videos/`. All `.mpg` files.
+**Movies are NOT in this repo.** They live on the lab NAS under
+`\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset`,
+which must contain subfolders `video_all/`, `video_nature/`, `video_social_directed/`,
+`video_social_undir/`. See `video_ebm_dataset/MANIFEST.csv` for the full expected
+file list and `dataset_licensing_citation.md` for attribution requirements.
 
 To set your local path: copy `paths.cfg.template` → `paths.cfg` (gitignored)
-and set the `filepath` line to your NAS mount. See the template for per-OS
-mounting instructions. `CONFI_` reads `paths.cfg` automatically at startup.
+and set the `filepath` line to your local mount of `video_ebm_dataset/`. See the
+template for per-OS mounting instructions. `CONFI_` reads `paths.cfg` at startup.
 
 ## How to run
 
