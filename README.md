@@ -238,3 +238,19 @@ Flip `dummymode = 0;`, connect the EyeLink Host PC, set `SkipSyncTests = 0;`, an
 point `filepath` at the NAS. On start it runs camera setup + 9-point calibration
 before trials. See **How to run** above for the full rig checklist.
   increment `total_trials` and get logged.
+
+## Devlog
+
+### 2026-07-14
+- Repo restructured: `Pilot data/` → `Data/Pilot data/`, `video_ebm_dataset/`
+  folder added with dataset metadata (CSVs, manifest, license).
+- Video folder names standardised (`Nature_videos/` → `video_nature/`, etc.),
+  path construction switched from `strcat`+backslash to `fullfile()` for
+  cross-platform compatibility.
+- `paths.cfg` system added for gitignored local NAS mount config.
+- `cclab-matlab-tools` added as git submodule under `Code/`.
+
+**Known issue — boundary video support (`pseudorandomization.m` line 28):**
+The commented-out boundary block has a bug: `selectedBoundaryMovies` is
+assigned from `notdirectedMpgFiles` instead of `boundaryMpgFiles`. Fix this
+before enabling boundary video support.
