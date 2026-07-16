@@ -1,47 +1,57 @@
 function interleaved_movies = pseudorandomization(n_per_category, filepath)
-%  This function produces a list of movies of length 3 * n_per_category. The first three movies contain one nature video, one
-%  socially directed video, and one social nondirected video, presented in a random order. The same is true for the next group
-%  of three movies, and so forth.
+% Produces a list of 3*n_per_category movies interleaved by category.
+% Each group of 3 contains one nature, one social-directed, and one
+% social-undirected video in a random order.
+%
+% Category membership is determined by MANIFEST.csv so only video_all/
+% is needed on disk — no per-category subfolders required.
 
-% Randomly select n_category movies from each folder
-%natureMovieDir = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_nature';
-natureMovieDir = fullfile(filepath, 'video_nature');
-natureMpgFiles = dir(fullfile(natureMovieDir,'*.mpg'));
-selectedNatureIndices = randperm(numel(natureMpgFiles), n_per_category);
-selectedNatureMovies = natureMpgFiles(selectedNatureIndices);
+videoDir = fullfile(filepath, 'video_all');
+manifest = fullfile(filepath, 'MANIFEST.csv');
 
-%directedMovieDir = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_social_directed';
-directedMovieDir = fullfile(filepath, 'video_social_directed');
-directedMpgFiles = dir(fullfile(directedMovieDir,'*.mpg'));
-selectedDirectedIndices = randperm(numel(directedMpgFiles), n_per_category);
-selectedDirectedMovies = directedMpgFiles(selectedDirectedIndices);
+% Get all .mpg files from video_all as proper dir() structs
+allFiles = dir(fullfile(videoDir, '*.mpg'));
 
-%notdirectedMovieDir = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_social_undir';
-notdirectedMovieDir = fullfile(filepath, 'video_social_undir');
-notdirectedMpgFiles = dir(fullfile(notdirectedMovieDir,'*.mpg'));
-selectedNotdirectedIndices = randperm(numel(notdirectedMpgFiles), n_per_category);
-selectedNotdirectedMovies = notdirectedMpgFiles(selectedNotdirectedIndices);
+% Read MANIFEST and filter by category
+T = readtable(manifest);
+natureFiles      = filterByCategory(allFiles, T, 'video_nature');
+directedFiles    = filterByCategory(allFiles, T, 'video_social_directed');
+notdirectedFiles = filterByCategory(allFiles, T, 'video_social_undir');
 
-%boundaryMovieDir = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_boundary';
-%boundaryMpgFiles = dir(fullfile(boundaryMovieDir,'*.mp4'));
-%selectedBoundaryIndices = randperm(numel(boundaryMpgFiles), n_per_category);
-%selectedBoundaryMovies = notdirectedMpgFiles(selectedBoundaryIndices);
+% Validate that enough files are available
+checkCount(numel(natureFiles),      n_per_category, 'video_nature',          videoDir, manifest);
+checkCount(numel(directedFiles),    n_per_category, 'video_social_directed', videoDir, manifest);
+checkCount(numel(notdirectedFiles), n_per_category, 'video_social_undir',    videoDir, manifest);
 
-% Interleave the movies
-interleaved_movies = [selectedNatureMovies; selectedDirectedMovies; selectedNotdirectedMovies];
-for i = 1:n_per_category
-    % Pick one movie from each list, and randomly shuffle the order
-    movie_subset = [selectedNatureMovies(i), selectedDirectedMovies(i), selectedNotdirectedMovies(i)];
-    rand_inds = randperm(length(movie_subset));
-    rand_movies = movie_subset(rand_inds);
+% Randomly select n_per_category from each category
+selectedNature      = natureFiles(randperm(numel(natureFiles),      n_per_category));
+selectedDirected    = directedFiles(randperm(numel(directedFiles),    n_per_category));
+selectedNotdir      = notdirectedFiles(randperm(numel(notdirectedFiles), n_per_category));
 
-    % Append to overall movie order
-    start_ind = (i-1)*3 + 1;
-    interleaved_movies(start_ind:start_ind+2) = rand_movies;
+% Interleave: each group of 3 has one from each category in a random order
+trio = [selectedNature(1); selectedDirected(1); selectedNotdir(1)];
+interleaved_movies = trio(randperm(3));
+for i = 2:n_per_category
+    trio = [selectedNature(i); selectedDirected(i); selectedNotdir(i)];
+    interleaved_movies = [interleaved_movies; trio(randperm(3))]; %#ok<AGROW>
+end
 
 end
 
-return
+% ---------------------------------------------------------------------------
 
+function subset = filterByCategory(allFiles, T, colName)
+% Returns the subset of allFiles whose names appear in MANIFEST with colName==1
+categoryNames = string(T.filename(T.(colName) == 1));
+allNames      = string({allFiles.name}');
+subset        = allFiles(ismember(allNames, categoryNames));
+end
 
+function checkCount(found, needed, category, videoDir, manifest)
+if found < needed
+    error('pseudorandomization:notEnoughFiles', ...
+        ['%s: found %d .mpg file(s) in "%s" matching MANIFEST, but need %d.\n' ...
+         'Check that video_all/ is populated and %s is up to date.'], ...
+        category, found, videoDir, needed, manifest);
+end
 end

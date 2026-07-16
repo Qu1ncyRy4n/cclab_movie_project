@@ -49,7 +49,7 @@ else
     elseif cclab.operating_system == "Linux"
         cclab.filepath = '/mnt/cclab/shared/Bliss-Moreau_Machado_Videos/video_ebm_dataset';
     else % Windows
-        cclab.filepath = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset';
+        cclab.filepath = "C:\Users\qmryan\Desktop\Bliss-Moreau_Machado_Videos\video_ebm_dataset";
     end
 end
 

@@ -196,13 +196,11 @@ try
         % Determine the correct source folder for the current movie
         if i <= practiceBlockSize
             movieFolder = practiceMovieDir;
+            fname = fullfile(movieFolder, selectedFiles(i).name);
         else
-            %mainMovieDir = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_all';
-            mainMovieDir = fullfile(cclab.filepath, 'video_all');
-            movieFolder = mainMovieDir;
+            % Use the source folder recorded by dir() in pseudorandomization
+            fname = fullfile(selectedFiles(i).folder, selectedFiles(i).name);
         end
-
-        fname  = fullfile(movieFolder, selectedFiles(i).name);
         %tmpImg = imread(fname);
         %[imgH, imgW, ~] = size(tmpImg);
 
