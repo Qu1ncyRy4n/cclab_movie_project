@@ -92,17 +92,23 @@ full screen height, centered horizontally (`movieDstRects{}`). Frame loop uses
 ## Movie selection / randomization
 
 `pseudorandomization(n_per_category, filepath)`:
-- Picks `n_per_category` random `.mpg` from each of Nature / Social_directed /
-  Social_notdirected.
-- Interleaves so every consecutive block of 3 has one of each type, order
-  shuffled within the block.
-- Returns `3 * n_per_category` file structs (from `dir`). Total session =
-  `practiceBlockSize + 3*moviespertype`.
+- Reads `video_ebm_dataset/MANIFEST.csv` (from repo, not from video path) to
+  determine which files in `video_all/` belong to each category.
+- Picks `n_per_category` random `.mpg` per category (nature / social_directed /
+  social_undir), interleaves so every consecutive block of 3 has one of each
+  type in random order.
+- Returns a `3*n_per_category × 1` struct array with fields:
+  - `.filepath` — full path to the `.mpg` file
+  - `.name` — filename only (for logging / Results table)
+  - `.category` — `'nature'` | `'social_directed'` | `'social_undir'`
+- Only `video_all/` needs to exist on disk. No per-category subfolders needed.
 
-**Boundary videos:** not wired up. `pseudorandomization.m` has commented-out
-Boundary scaffolding; to add, create a `Boundary_videos/` folder and extend the
-interleave. Practice-movie path exists in RUN_ but was never used
-(`practiceBlockSize=0`); the movie code may not work with it >0 (per author note).
+**Boundary videos:** not wired up. To add: extend MANIFEST with a `video_boundary`
+column and add a 4th category in `pseudorandomization.m`.
+
+**Practice block:** vestigial from the image-paradigm predecessor. `practiceBlockSize`
+must stay `0` — the practice path still uses `dir()` structs which are incompatible
+with the new trial struct format. See open issues below.
 
 ## Config params (CONFI_ ... .m)
 
@@ -173,17 +179,19 @@ MATLAB opaque object — **scipy/Python cannot read it**; open in MATLAB
 
 ## Gotchas / things to know
 
-- Paths are **Windows/UNC** (`\\cns-nas...`, `strcat(filepath,'\Videos')`).
-  Won't work as-is on Mac/Linux — hardcoded backslashes.
 - Needs `cclabInitDIO('jA')` + `cclabReward` from lab's `cclab-matlab-tools`
-  (not in this repo) for real reward delivery.
-- `state == 'Movie_present'` comparisons use `'...'` (char) vs `"..."` (string)
-  inconsistently — works in MATLAB by coercion but fragile.
-- `rewardImagePath = pwd` — reward png must be in the working dir at run time.
+  (submodule at `Code/cclab-matlab-tools/`) for real reward delivery.
+- `state == 'Movie_present'` comparisons mix `'...'` (char) and `"..."` (string)
+  — works in MATLAB by coercion but fragile.
+- `rewardImagePath = pwd` — reward `.png` must be in the working directory at
+  run time; always run from `Code/`.
 - Fixation window is a **square**, dot is drawn as oval; naming says "radius".
-- Reward only gated on phase-1 fixation, not full movie watch.
-- Success counter `total_success` gates session end, but aborted trials still
-  increment `total_trials` and get logged.
+- **Success definition:** `TrialSuccess=1` means the monkey held fixation through
+  phase 1 only (`t_fixdot_on_image` = 0.8 s). Phase 2 is free-viewing with no
+  fixation requirement. A monkey can watch a lot of movie time on "failed" trials
+  — consider this when interpreting viewing-time analyses.
+- `total_success` gates session end; aborted trials still increment `total_trials`
+  and are logged. The same movie retries until it earns a reward.
 
 ## Quickstart (MATLAB newcomers)
 
@@ -230,8 +238,9 @@ Do this first to see the task work on your own laptop.
   the real rig).
 - **Reward-image error** → the reward `.png` must be in the working directory;
   run from `Code/` where the images live.
-- **Movie won't load** → `filepath` wrong, or missing the category subfolders, or
-  files aren't `.mpg`.
+- **Movie won't load** → `filepath` in `paths.cfg` wrong, or `video_all/` missing
+  or empty, or files aren't `.mpg`. MANIFEST.csv is read from the repo — you do
+  not need to copy it alongside the videos.
 
 ### Going to the real rig
 Flip `dummymode = 0;`, connect the EyeLink Host PC, set `SkipSyncTests = 0;`, and
@@ -239,7 +248,44 @@ point `filepath` at the NAS. On start it runs camera setup + 9-point calibration
 before trials. See **How to run** above for the full rig checklist.
   increment `total_trials` and get logged.
 
+## Open issues / TODO
+
+- [ ] **Practice block incompatible with new struct** — `practiceBlockSize > 0`
+  will crash because practice files are raw `dir()` structs; needs to build
+  `.filepath/.name/.category` structs instead. Low priority: practice is unused.
+- [ ] **Results table not yet updated** — `VideoCategory`, `VideoDuration_s`, and
+  `VideoWidth`/`VideoHeight` are not yet captured in the Results table. These are
+  free from `Screen('OpenMovie')` return values and worth adding before real data
+  collection.
+- [ ] **Console debug print not yet added** — wanted a per-trial category print to
+  MATLAB command window (e.g. `[Trial 3] category: nature | file: 00181DVD.mpg`).
+- [ ] **`TrialType` column is always "Main"** — "Practice" path is dead; column
+  is vestigial. Either remove or repurpose.
+- [ ] **Move videos from Desktop to NAS** — currently running off local Desktop copy
+  for speed. Before real data collection, update `paths.cfg` to point at NAS
+  (`\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset`).
+- [ ] **Windows shortcut to repo** — create a `.lnk` on the lab Desktop pointing to
+  the repo root so it's easy to find on the Windows machine.
+- [ ] **Boundary video support** — not wired up. Add `video_boundary` column to
+  MANIFEST, extend `pseudorandomization.m` with a 4th category and group size.
+
 ## Devlog
+
+### 2026-07-16
+- **`pseudorandomization.m` fully rewritten** — no longer reads from per-category
+  subfolders (`video_nature/` etc.). Now reads only `video_all/` and filters using
+  `MANIFEST.csv`. MANIFEST is resolved relative to the script file (in the repo),
+  so videos and manifest can live in separate locations (Desktop vs. repo).
+- **New trial struct** — `pseudorandomization` now returns structs with
+  `.filepath` (full path), `.name` (filename), `.category` ('nature' |
+  'social_directed' | 'social_undir') instead of raw `dir()` structs.
+- **`playOrder` removed** — was a vestigial identity array (`1:N`); replaced
+  `idx = playOrder(currentPtr)` with `idx = currentPtr` directly.
+- **`paths.cfg` updated** to Desktop video path for current development machine
+  (`C:\Users\qmryan\Desktop\Bliss-Moreau_Machado_Videos\video_ebm_dataset`).
+- **Fixed** `Screen('OpenMovie')` crash — run script was looking in `video_all/`
+  for files selected from category subfolders; now uses `.filepath` from the
+  trial struct directly.
 
 ### 2026-07-14
 - Repo restructured: `Pilot data/` → `Data/Pilot data/`, `video_ebm_dataset/`
@@ -249,8 +295,3 @@ before trials. See **How to run** above for the full rig checklist.
   cross-platform compatibility.
 - `paths.cfg` system added for gitignored local NAS mount config.
 - `cclab-matlab-tools` added as git submodule under `Code/`.
-
-**Known issue — boundary video support (`pseudorandomization.m` line 28):**
-The commented-out boundary block has a bug: `selectedBoundaryMovies` is
-assigned from `notdirectedMpgFiles` instead of `boundaryMpgFiles`. Fix this
-before enabling boundary video support.
