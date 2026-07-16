@@ -1,24 +1,32 @@
-function interleaved_movies = pseudorandomization(n_per_category, filepath)
-% Produces a list of 3*n_per_category movies interleaved by category.
-% Each group of 3 contains one nature, one social-directed, and one
-% social-undirected video in a random order.
+function trials = pseudorandomization(n_per_category, filepath)
+% Returns a struct array of length 3*n_per_category describing the main
+% trial sequence. Each group of 3 consecutive trials contains one nature,
+% one social-directed, and one social-undirected video in a random order.
 %
-% Category membership is determined by MANIFEST.csv so only video_all/
-% is needed on disk — no per-category subfolders required.
+% Fields per element:
+%   .filepath   full path to the .mpg file
+%   .name       filename only (for logging)
+%   .category   'nature' | 'social_directed' | 'social_undir'
+%
+% Category membership is read from MANIFEST.csv so only video_all/ is
+% needed on disk — no per-category subfolders required.
 
 videoDir = fullfile(filepath, 'video_all');
-manifest = fullfile(filepath, 'MANIFEST.csv');
 
-% Get all .mpg files from video_all as proper dir() structs
+% MANIFEST.csv lives in the repo (video_ebm_dataset/), not alongside the videos
+scriptDir = fileparts(mfilename('fullpath'));
+manifest  = fullfile(scriptDir, '..', 'video_ebm_dataset', 'MANIFEST.csv');
+
+% Get all .mpg files from video_all
 allFiles = dir(fullfile(videoDir, '*.mpg'));
 
-% Read MANIFEST and filter by category
+% Read MANIFEST and build per-category lists
 T = readtable(manifest);
-natureFiles      = filterByCategory(allFiles, T, 'video_nature');
-directedFiles    = filterByCategory(allFiles, T, 'video_social_directed');
-notdirectedFiles = filterByCategory(allFiles, T, 'video_social_undir');
+natureFiles      = filterByCategory(allFiles, T, 'video_nature',          videoDir);
+directedFiles    = filterByCategory(allFiles, T, 'video_social_directed', videoDir);
+notdirectedFiles = filterByCategory(allFiles, T, 'video_social_undir',    videoDir);
 
-% Validate that enough files are available
+% Validate counts before attempting randperm
 checkCount(numel(natureFiles),      n_per_category, 'video_nature',          videoDir, manifest);
 checkCount(numel(directedFiles),    n_per_category, 'video_social_directed', videoDir, manifest);
 checkCount(numel(notdirectedFiles), n_per_category, 'video_social_undir',    videoDir, manifest);
@@ -30,27 +38,43 @@ selectedNotdir      = notdirectedFiles(randperm(numel(notdirectedFiles), n_per_c
 
 % Interleave: each group of 3 has one from each category in a random order
 trio = [selectedNature(1); selectedDirected(1); selectedNotdir(1)];
-interleaved_movies = trio(randperm(3));
+trials = trio(randperm(3));
 for i = 2:n_per_category
     trio = [selectedNature(i); selectedDirected(i); selectedNotdir(i)];
-    interleaved_movies = [interleaved_movies; trio(randperm(3))]; %#ok<AGROW>
+    trials = [trials; trio(randperm(3))]; %#ok<AGROW>
 end
 
 end
 
 % ---------------------------------------------------------------------------
 
-function subset = filterByCategory(allFiles, T, colName)
-% Returns the subset of allFiles whose names appear in MANIFEST with colName==1
+function subset = filterByCategory(allFiles, T, colName, videoDir)
+% Returns trial structs for files in video_all that MANIFEST marks as colName==1
 categoryNames = string(T.filename(T.(colName) == 1));
 allNames      = string({allFiles.name}');
-subset        = allFiles(ismember(allNames, categoryNames));
+mask          = ismember(allNames, categoryNames);
+matchedFiles  = allFiles(mask);
+
+category = strrep(colName, 'video_', '');
+n = numel(matchedFiles);
+
+if n == 0
+    subset = struct('filepath', {}, 'name', {}, 'category', {});
+    return;
+end
+
+for k = n:-1:1
+    subset(k).filepath = fullfile(videoDir, matchedFiles(k).name);
+    subset(k).name     = matchedFiles(k).name;
+    subset(k).category = category;
+end
+subset = subset(:);
 end
 
 function checkCount(found, needed, category, videoDir, manifest)
 if found < needed
     error('pseudorandomization:notEnoughFiles', ...
-        ['%s: found %d .mpg file(s) in "%s" matching MANIFEST, but need %d.\n' ...
+        ['%s: found %d .mpg file(s) in\n  %s\nmatching MANIFEST, but need %d.\n' ...
          'Check that video_all/ is populated and %s is up to date.'], ...
         category, found, videoDir, needed, manifest);
 end

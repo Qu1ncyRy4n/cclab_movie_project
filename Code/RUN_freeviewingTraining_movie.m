@@ -183,9 +183,10 @@ try
 
     % --- Part 3: Combine lists and pre-load all textures ---
     fprintf('Loading %d practice trials and %d main trials.\n', practiceBlockSize, mainBlockSize);
-    selectedFiles = [shuffledPracticeFiles; shuffledMainFiles]; % Append main trials after practice
+    % NOTE: practice block (practiceBlockSize > 0) not yet compatible with the
+    % new trial struct format (.filepath/.name/.category). Keep practiceBlockSize=0.
+    selectedFiles = shuffledMainFiles;
     totalSessionSize = numel(selectedFiles);
-    playOrder = 1:totalSessionSize; % We play them in the already shuffled order
     currentPtr = 1;
 
     % Pre-load textures and destination rects for the entire session
@@ -193,14 +194,7 @@ try
     movieDstRects = cell(totalSessionSize,1);
 
     for i = 1:totalSessionSize
-        % Determine the correct source folder for the current movie
-        if i <= practiceBlockSize
-            movieFolder = practiceMovieDir;
-            fname = fullfile(movieFolder, selectedFiles(i).name);
-        else
-            % Use the source folder recorded by dir() in pseudorandomization
-            fname = fullfile(selectedFiles(i).folder, selectedFiles(i).name);
-        end
+        fname = selectedFiles(i).filepath;
         %tmpImg = imread(fname);
         %[imgH, imgW, ~] = size(tmpImg);
 
@@ -503,7 +497,7 @@ try
                     %total_success = total_success + 1;
                     trialInfo.FixEnd = 1000*(GetSecs - trial_start_time);  % ms
 
-                    idx              = playOrder(currentPtr);
+                    idx              = currentPtr;
                     chosenTex        = movieTextures{idx};
                     chosenImageName  = selectedFiles(idx).name;
                     dstRect = movieDstRects{idx};
