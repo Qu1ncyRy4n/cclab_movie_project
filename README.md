@@ -29,7 +29,7 @@ Video project/
 │   ├── video_social_undir/    (gitignored)
 │   ├── video_boundary/        (gitignored)
 │   └── video_clipped/         (gitignored)
-├── paths.cfg.template                    ← copy to paths.cfg and set your NAS mount
+├── paths.cfg.template                    ← add your machine here; set computer_name in paths.cfg
 └── readme_snovik.docx                    ← original rotation notes
 ```
 
@@ -39,9 +39,11 @@ which must contain subfolders `video_all/`, `video_nature/`, `video_social_direc
 `video_social_undir/`. See `video_ebm_dataset/MANIFEST.csv` for the full expected
 file list and `dataset_licensing_citation.md` for attribution requirements.
 
-To set your local path: copy `paths.cfg.template` → `paths.cfg` (gitignored)
-and set the `filepath` line to your local mount of `video_ebm_dataset/`. See the
-template for per-OS mounting instructions. `CONFI_` reads `paths.cfg` at startup.
+To set your local path: copy `paths.cfg.template` → `paths.cfg` (gitignored) and
+set `computer_name` to the section in the template that matches this machine (e.g.
+`computer_name = lab_120`). If your machine isn't listed, add a `[section]` to the
+template and commit it. See the template for NAS mounting instructions per OS.
+`CONFI_` reads `paths.cfg` at startup.
 
 ## How to run
 
@@ -117,7 +119,7 @@ with the new trial struct format. See open issues below.
 | `dummymode` | 1 (code) / 0 (pilot ran real) | 0=EyeLink, 1=mouse |
 | `operating_system` | "Windows11" | "MacOS" / "Linux" / "Windows11" — sets NAS fallback path if no paths.cfg |
 | `useFixedSeed` / `randomSeed` | false / 1 | reproducible movie order |
-| `filepath` | read from paths.cfg | movie root (auto-loaded; falls back to OS default) |
+| `filepath` | read from paths.cfg | video root — looked up via `computer_name` in `paths.cfg.template`; falls back to OS default |
 | `practiceBlockSize` | 0 | practice trials (keep 0) |
 | `moviespertype` | 2 (code) / 3 (pilot) | movies per category → total = 3× |
 | `t_waitfixation_fp` | 5 s | max time to acquire fixation |
@@ -214,10 +216,10 @@ Do this first to see the task work on your own laptop.
    the `Code/` folder of this project so it's the working directory.
 3. Open `CONFI_freeviewingTraining_movie.m` in the editor. Set:
    - `dummymode = 1;`  → gaze follows your **mouse** instead of an eye tracker.
-   - Copy `paths.cfg.template` → `paths.cfg` in the repo root and set `filepath`
-     to a local folder of `.mpg` files (the NAS path won't work off the lab
-     network). Needs `Videos/`, `Nature_videos/`, `Social_directed_videos/`,
-     `Social_notdirected_videos/` subfolders.
+   - Copy `paths.cfg.template` → `paths.cfg` in the repo root. Set
+     `computer_name` to the matching `[section]` (or add a new one and commit
+     it). If testing off-network, set `video_path` to a local folder of `.mpg`
+     files inside a `video_all/` subfolder.
    - `moviespertype = 1;` → short session while testing.
    Save the file (Ctrl/Cmd-S).
 4. In the Command Window, type the run command **without** `.m` and press Enter:
@@ -270,6 +272,17 @@ before trials. See **How to run** above for the full rig checklist.
   MANIFEST, extend `pseudorandomization.m` with a 4th category and group size.
 
 ## Devlog
+
+### 2026-07-22
+- **`paths.cfg` system reworked to per-machine named configs** — `paths.cfg.template`
+  now uses INI-style `[machine_name]` sections (`lab_120`, `lab_121`, `macbook_pro`,
+  `dev_wsl`). Local `paths.cfg` (gitignored) sets `computer_name = <section>`;
+  CONFI looks up `video_path` from that section in the template. Old flat-key
+  `filepath = ...` still works as a fallback for backward compat. Motivation: flat
+  `filepath` key failed on other lab computers because each has a different NAS
+  mount or local path — tracked sections make the right path per machine explicit.
+- Each section also has a `matlab_path` for documentation (where the repo lives on
+  that machine); not yet used by CONFI but useful reference.
 
 ### 2026-07-16
 - **`pseudorandomization.m` fully rewritten** — no longer reads from per-category

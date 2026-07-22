@@ -1,36 +1,55 @@
-# paths.cfg.template — tracked template for local video path config
-# -----------------------------------------------------------------
-# Added 2026-07-14: videos are too large for git and live on the lab NAS,
-# so each user keeps a gitignored paths.cfg with their local mount path.
+# paths.cfg.template — tracked; defines video and MATLAB paths for each lab computer
+# ----------------------------------------------------------------------------------
+# Added 2026-07-14; updated 2026-07-22 to named per-machine sections.
 #
-# Copy this file to paths.cfg (same directory) and set filepath below.
-# CONFI_freeviewingTraining_movie.m reads paths.cfg automatically at startup.
+# SETUP (one time per machine)
+# ----------------------------
+# 1. Copy this file to paths.cfg (same folder — it's gitignored).
+# 2. In paths.cfg, set computer_name to the section below that matches this machine:
+#
+#      computer_name = lab_120
+#
+# 3. CONFI_freeviewingTraining_movie.m reads paths.cfg at startup and looks up
+#    video_path for the named computer from this file automatically.
+# 4. If this machine isn't listed below, add a [new_section] here and commit it.
 #
 #
 # HOW TO MOUNT THE NAS
 # --------------------
-# Videos live at: \\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset
+# Video files live on the NAS at:
+#   \\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset
 #
-# Windows
-#   Use the UNC path directly (no mounting needed):
-#     filepath = \\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset
-#   Or map a drive: File Explorer → "Map network drive" →
-#     \\cns-nas.ucdavis.edu\cclab\shared, then use the assigned letter, e.g.:
-#     filepath = Z:\Bliss-Moreau_Machado_Videos\video_ebm_dataset
-#
-# Mac
-#   Finder → Go → Connect to Server (Cmd-K) → smb://cns-nas.ucdavis.edu/cclab
-#   The share mounts at /Volumes/cclab. Set:
-#     filepath = /Volumes/cclab/shared/Bliss-Moreau_Machado_Videos/video_ebm_dataset
-#
-# Linux
-#   sudo mount -t cifs //cns-nas.ucdavis.edu/cclab /mnt/cclab \
-#     -o username=YOUR_CAS_LOGIN,vers=3.0
-#   Set:
-#     filepath = /mnt/cclab/shared/Bliss-Moreau_Machado_Videos/video_ebm_dataset
+# Windows : use the UNC path directly (no mounting needed), or map a drive:
+#             File Explorer → "Map network drive" → \\cns-nas.ucdavis.edu\cclab\shared
+#             Then use the assigned letter (e.g. Z:\...\video_ebm_dataset) as video_path.
+# Mac     : Finder → Go → Connect to Server (Cmd-K) → smb://cns-nas.ucdavis.edu/cclab
+#             Share mounts at /Volumes/cclab — use that prefix for video_path.
+# Linux   : sudo mount -t cifs //cns-nas.ucdavis.edu/cclab /mnt/cclab \
+#               -o username=YOUR_CAS_LOGIN,vers=3.0
+#             Use /mnt/cclab as prefix.
 #
 #
-# REQUIRED SUBFOLDERS inside filepath:
-#   video_all/  video_nature/  video_social_directed/  video_social_undir/
+# FIELDS
+# ------
+# video_path  — path to video_ebm_dataset/ (must contain video_all/)  [required]
+# matlab_path — path to this repo on disk                             [documentation only]
 
-filepath = \\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset
+
+# ── Lab Windows PCs (NAS over UNC) ──────────────────────────────────────────
+[lab_120]
+video_path  = \\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset
+matlab_path = C:\Users\qmryan\Desktop\cclab_movie_project
+
+[lab_121]
+video_path  = \\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset
+matlab_path = C:\Users\qmryan\Desktop\cclab_movie_project
+
+# ── Mac ─────────────────────────────────────────────────────────────────────
+[macbook_pro]
+video_path  = /Volumes/cclab/shared/Bliss-Moreau_Machado_Videos/video_ebm_dataset
+matlab_path = /Users/username/Documents/MATLAB/cclab_movie_project
+
+# ── Dev (Quincy's WSL machine — videos on local Desktop) ────────────────────
+[dev_wsl]
+video_path  = C:\Users\qmryan\Desktop\Bliss-Moreau_Machado_Videos\video_ebm_dataset
+matlab_path = \\wsl.localhost\Ubuntu\home\qix\dev\cclab_movie_project

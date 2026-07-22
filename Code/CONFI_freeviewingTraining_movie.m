@@ -23,33 +23,32 @@ cclab.useFixedSeed = false;
 cclab.randomSeed   = 1; % 1 for Vennie
 
 %% Filepath
-% The folder must point to video_ebm_dataset/ and contain:
-% video_all/, video_nature/, video_social_directed/, video_social_undir/.
-% Set your local path in paths.cfg (copy from
-% paths.cfg.template in the repo root — it's gitignored so edits stay local).
-pathsCfg = fullfile(fileparts(mfilename('fullpath')), '..', 'paths.cfg');
+% video_path points to video_ebm_dataset/ and must contain video_all/.
+% Set computer_name in paths.cfg (copy from paths.cfg.template, gitignored).
+% CONFI reads paths.cfg → looks up video_path in the named section of paths.cfg.template.
+repoRoot  = fullfile(fileparts(mfilename('fullpath')), '..');
+pathsCfg  = fullfile(repoRoot, 'paths.cfg');
+pathsTmpl = fullfile(repoRoot, 'paths.cfg.template');
+
+cclab.filepath = '';
 if exist(pathsCfg, 'file')
-    fid = fopen(pathsCfg, 'r');
-    cclab.filepath = '';
-    while true
-        line = fgetl(fid);
-        if ~ischar(line), break; end
-        line = strtrim(line);
-        if isempty(line) || line(1) == '#', continue; end
-        eqIdx = strfind(line, '=');
-        if ~isempty(eqIdx) && strcmp(strtrim(line(1:eqIdx(1)-1)), 'filepath')
-            cclab.filepath = strtrim(line(eqIdx(1)+1:end));
-        end
+    computerName = cfgKey(pathsCfg, '', 'computer_name');
+    if ~isempty(computerName) && exist(pathsTmpl, 'file')
+        cclab.filepath = cfgKey(pathsTmpl, computerName, 'video_path');
     end
-    fclose(fid);
-else
-    % Fallback defaults — create paths.cfg from paths.cfg.template to override
+    if isempty(cclab.filepath)           % legacy: flat 'filepath' key in paths.cfg
+        cclab.filepath = cfgKey(pathsCfg, '', 'filepath');
+    end
+end
+
+if isempty(cclab.filepath)
+    % OS defaults — create paths.cfg from paths.cfg.template to override
     if cclab.operating_system == "MacOS"
         cclab.filepath = '/Volumes/cclab/shared/Bliss-Moreau_Machado_Videos/video_ebm_dataset';
     elseif cclab.operating_system == "Linux"
         cclab.filepath = '/mnt/cclab/shared/Bliss-Moreau_Machado_Videos/video_ebm_dataset';
     else % Windows
-        cclab.filepath = "C:\Users\qmryan\Desktop\Bliss-Moreau_Machado_Videos\video_ebm_dataset";
+        cclab.filepath = 'C:\Users\qmryan\Desktop\Bliss-Moreau_Machado_Videos\video_ebm_dataset';
     end
 end
 
@@ -130,4 +129,34 @@ end
 
 % The size (in deg of visual angle) of the drawn reward image on the screen
 cclab.rewardImageDimDeg = 6;
+end
+
+% ---------------------------------------------------------------------------
+function val = cfgKey(filename, section, key)
+% Read key from an INI-style config. section='' reads global (pre-section) keys.
+val = '';
+fid = fopen(filename, 'r');
+if fid < 0, return; end
+inTarget = isempty(section);
+while true
+    line = fgetl(fid);
+    if ~ischar(line), break; end
+    line = strtrim(line);
+    if isempty(line) || line(1) == '#' || line(1) == ';', continue; end
+    if line(1) == '['
+        br = find(line == ']', 1);
+        if ~isempty(br)
+            inTarget = strcmpi(strtrim(line(2:br-1)), section);
+        end
+        continue;
+    end
+    if ~inTarget, continue; end
+    eq = find(line == '=', 1);
+    if isempty(eq), continue; end
+    if strcmpi(strtrim(line(1:eq-1)), key)
+        val = strtrim(line(eq+1:end));
+        break;
+    end
+end
+fclose(fid);
 end
