@@ -183,6 +183,11 @@ try
 
     % --- Part 3: Combine lists and pre-load all textures ---
     fprintf('Loading %d practice trials and %d main trials.\n', practiceBlockSize, mainBlockSize);
+    fprintf('\n--- Planned movie sequence ---\n');
+    for dbg = 1:numel(shuffledMainFiles)
+        fprintf('  [%d] %-20s  %s\n', dbg, shuffledMainFiles(dbg).category, shuffledMainFiles(dbg).name);
+    end
+    fprintf('------------------------------\n\n');
     % NOTE: practice block (practiceBlockSize > 0) not yet compatible with the
     % new trial struct format (.filepath/.name/.category). Keep practiceBlockSize=0.
     selectedFiles = shuffledMainFiles;
@@ -505,6 +510,7 @@ try
                     trialInfo.ImageShown = chosenImageName;
                     trialInfo.ImageRect = movieDstRects(idx);
 
+                    fprintf('\t[slot %d] category: %s | file: %s\n', idx, selectedFiles(idx).category, chosenImageName);
                     state = "Movie_present";
                 end
 
