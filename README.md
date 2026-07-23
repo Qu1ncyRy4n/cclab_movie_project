@@ -10,10 +10,11 @@ rotation project (based on O. Soyuhos' 2025 fixation-training code).
 Video project/
 ├── Code/
 │   ├── RUN_freeviewingTraining_movie.m   ← run this
-│   ├── CONFI_freeviewingTraining_movie.m ← all params
+│   ├── CONFI_freeviewingTraining_movie.m ← all params (set computer_name here)
 │   ├── pseudorandomization.m             ← movie-order picker
 │   ├── isaac_reward.png / wennie_reward.png  ← reward-screen images
 │   └── cclab-matlab-tools/               ← lab MATLAB utilities (git submodule)
+├── encode_mp4.sh                         ← re-encode .mpg → H.264 .mp4 (run from WSL)
 ├── Data/
 │   └── Pilot data/demo_2026-03-05_1439/
 │       ├── demo_2026-03-05_1439.mat      ← Results table + config
@@ -23,7 +24,7 @@ Video project/
 │   ├── MANIFEST.csv                      ← expected files per subfolder (for verification)
 │   ├── Machado et al. 2011 Video Content.csv
 │   ├── Bliss-Moreau, Machado, & Amaral, 2013 Video Rating.csv
-│   ├── video_all/    (gitignored — 1200 .mpg files)
+│   ├── video_all/    (gitignored — 1200 .mp4 files, re-encoded from original .mpg)
 │   ├── video_nature/ (gitignored)
 │   ├── video_social_directed/ (gitignored)
 │   ├── video_social_undir/    (gitignored)
@@ -236,15 +237,15 @@ Do this first to see the task work on your own laptop.
   the real rig).
 - **Reward-image error** → the reward `.png` must be in the working directory;
   run from `Code/` where the images live.
-- **Movie won't load** → `filepath` in `paths.cfg` wrong, or `video_all/` missing
-  or empty, or files aren't `.mpg`. MANIFEST.csv is read from the repo — you do
-  not need to copy it alongside the videos.
+- **Movie won't load** → `filepath` in CONFI wrong, or `video_all/` missing or
+  empty, or files aren't `.mp4`. MANIFEST.csv is read from the repo — you do not
+  need to copy it alongside the videos.
 
 ### Going to the real rig
-Flip `dummymode = 0;`, connect the EyeLink Host PC, set `SkipSyncTests = 0;`, and
-point `filepath` at the NAS. On start it runs camera setup + 9-point calibration
-before trials. See **How to run** above for the full rig checklist.
-  increment `total_trials` and get logged.
+Set `computer_name = 'lab_120'` (or `'lab_121'`) in CONFI — this automatically
+sets `dummymode=0` and points `filepath` at the NAS. Connect the EyeLink Host PC;
+on start it runs camera setup + 9-point calibration before trials. See **How to
+run** above for the full rig checklist.
 
 ## Open issues / TODO
 
@@ -256,12 +257,12 @@ before trials. See **How to run** above for the full rig checklist.
   free from `Screen('OpenMovie')` return values and worth adding before real data
   collection.
 - [ ] **Console debug print not yet added** — wanted a per-trial category print to
-  MATLAB command window (e.g. `[Trial 3] category: nature | file: 00181DVD.mpg`).
+  MATLAB command window (e.g. `[Trial 3] category: nature | file: 00181DVD.mp4`).
 - [ ] **`TrialType` column is always "Main"** — "Practice" path is dead; column
   is vestigial. Either remove or repurpose.
-- [ ] **Move videos from Desktop to NAS** — currently running off local Desktop copy
-  for speed. Before real data collection, update `paths.cfg` to point at NAS
-  (`\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset`).
+- [ ] **Move encoded videos to NAS** — re-encoding .mpg → .mp4 in progress (see
+  `encode_mp4.sh`). Once complete, copy `video_all_mp4/` contents to NAS
+  `video_all/` and set `computer_name = 'lab_120'` in CONFI.
 - [ ] **Windows shortcut to repo** — create a `.lnk` on the lab Desktop pointing to
   the repo root so it's easy to find on the Windows machine.
 - [ ] **Boundary video support** — not wired up. Add `video_boundary` column to
@@ -270,6 +271,15 @@ before trials. See **How to run** above for the full rig checklist.
 ## Devlog
 
 ### 2026-07-23
+- **Video format switched to H.264 `.mp4`** — original `.mpg` files (MPEG-2) are
+  being re-encoded using `encode_mp4.sh` (ffmpeg, CRF 20, `libx264`, `preset slow`).
+  Originals remain on NAS untouched. Code updated to scan for `*.mp4`; MANIFEST
+  matching is now extension-agnostic (basename only) so MANIFEST.csv needs no update.
+  Some source files have minor MPEG-2 decode warnings (`ac-tex damaged`) — these
+  reflect pre-existing corruption in the original rip, not encode errors.
+- **`matlab_path` added per machine** — CONFI switch now sets both `filepath`
+  (videos) and `matlab_path` (Code/ folder), which are used for `addpath` so
+  MATLAB can find project files and `cclab-matlab-tools` automatically.
 - **Machine config simplified** — `paths.cfg` / `paths.cfg.template` system removed.
   `CONFI` now has a single `computer_name` variable at the top; a `switch` block
   sets both `dummymode` and `filepath` automatically. Lab rigs (`lab_120`,
