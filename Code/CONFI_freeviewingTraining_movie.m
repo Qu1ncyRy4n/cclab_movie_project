@@ -5,22 +5,30 @@ function cclab = CONFI_freeviewingTraining_movie()
 % for a freeviewing training experiment.
 
 %% Machine / rig identity
-% Set computer_name to match this machine.
-% Lab rigs (lab_120, lab_121) run real EyeLink (dummymode = 0).
-% All other machines default to mouse testing (dummymode = 1).
-% To add a new machine: add a case with its dummymode and filepath.
+% Set computer_name to match this machine. Everything else is derived from it.
+% Lab rigs (lab_120, lab_121) get dummymode=0 (real EyeLink); all others dummymode=1 (mouse).
+% To add a new machine: add a case with dummymode, filepath, and matlab_path.
+%
+% matlab_path — the Code/ folder of this repo on the local filesystem.
+%   CONFI adds it (and cclab-matlab-tools inside it) to MATLAB's search path
+%   automatically, so scripts are findable for the rest of the session.
+%   Note: MATLAB must be able to find RUN_ or CONFI initially (e.g. cd Code/
+%   once, or add Code/ to MATLAB's default path in Preferences).
 cclab.computer_name = 'dev_wsl';
 
 switch cclab.computer_name
     case {'lab_120', 'lab_121'}
-        cclab.dummymode = 0;
-        cclab.filepath  = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset';
+        cclab.dummymode  = 0;
+        cclab.filepath   = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset';
+        cclab.matlab_path = 'C:\Users\qmryan\Desktop\cclab_movie_project\Code';
     case 'macbook_pro'
-        cclab.dummymode = 1;
-        cclab.filepath  = '/Volumes/cclab/shared/Bliss-Moreau_Machado_Videos/video_ebm_dataset';
+        cclab.dummymode  = 1;
+        cclab.filepath   = '/Volumes/cclab/shared/Bliss-Moreau_Machado_Videos/video_ebm_dataset';
+        cclab.matlab_path = '/Users/username/Documents/MATLAB/cclab_movie_project/Code';
     case 'dev_wsl'
-        cclab.dummymode = 1;
-        cclab.filepath  = 'C:\Users\qmryan\Desktop\Bliss-Moreau_Machado_Videos\video_ebm_dataset';
+        cclab.dummymode  = 1;
+        cclab.filepath   = 'C:\Users\qmryan\Desktop\Bliss-Moreau_Machado_Videos\video_ebm_dataset';
+        cclab.matlab_path = fullfile(fileparts(mfilename('fullpath')));
     otherwise
         error('CONFI: unknown computer_name "%s" — add a case to the switch block.', cclab.computer_name);
 end
@@ -90,8 +98,8 @@ cclab.obs_dist     = 80;
 cclab.screenWidth  = 60;
 
 %% Rig / Reward Image
-addpath(fullfile(fileparts(mfilename('fullpath')), 'cclab-matlab-tools'))
-%2/13
+addpath(cclab.matlab_path);
+addpath(fullfile(cclab.matlab_path, 'cclab-matlab-tools'));
 
 % Which rig is being used ('Isaac', 'Wennie', etc.) — determines which reward image is loaded
 cclab.whichMonkey         = 'Isaac';
