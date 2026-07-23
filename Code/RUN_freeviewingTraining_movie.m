@@ -634,8 +634,9 @@ try
                     % Close everything up
                     Screen('Flip', window);
                     KbReleaseWait;
-                    Screen('PlayMovie', chosenTex, 0); % Stop playback
-                    Screen('CloseMovie', chosenTex); % Close movie object
+                    Screen('PlayMovie', chosenTex, 0);
+                    Screen('CloseMovie', chosenTex);
+                    movieTextures{idx} = [];  % mark as closed so cleanup skips it
                 end
 
                 if state == "Movie_present"
@@ -706,6 +707,14 @@ try
         end
     end
 
+    %% Close any pre-loaded movies not yet closed during playback
+    for mi = 1:numel(movieTextures)
+        if ~isempty(movieTextures{mi})
+            try, Screen('CloseMovie', movieTextures{mi}); catch, end
+            movieTextures{mi} = [];
+        end
+    end
+
     %% Clean up EyeLink
     if useRealEyelink
         Eyelink('StopRecording');
@@ -747,9 +756,18 @@ catch ME
         fprintf('Eyelink shut down.\n');
     end
     
+    % Close any pre-loaded movies still open
+    if exist('movieTextures', 'var')
+        for mi = 1:numel(movieTextures)
+            if ~isempty(movieTextures{mi})
+                try, Screen('CloseMovie', movieTextures{mi}); catch, end
+            end
+        end
+    end
+
     % Run the original cleanup (closes screen, etc.)
     cleanup();
-    
+
     % Rethrow the original error to notify the user of what went wrong
     rethrow(ME);
 end
