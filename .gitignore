@@ -5,6 +5,7 @@ paths.cfg
 .ipynb_checkpoints/
 Data/Pilot data/*/*.asc
 Data/Pilot data/*/results.csv
+*.asv
 
 video_ebm_dataset/video_all/
 video_ebm_dataset/video_nature/
