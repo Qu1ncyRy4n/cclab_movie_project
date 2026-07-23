@@ -19,16 +19,16 @@ cclab.computer_name = 'dev_wsl';
 switch cclab.computer_name
     case {'lab_120', 'lab_121'}
         cclab.dummymode  = 0;
-        cclab.filepath   = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset';
+        cclab.filepath   = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset'; % file path requires video_all/ and MANIFEST.csv
         cclab.matlab_path = 'C:\Users\qmryan\Desktop\cclab_movie_project\Code';
-    case 'macbook_pro'
+    case 'q_mb_pro'
         cclab.dummymode  = 1;
         cclab.filepath   = '/Volumes/cclab/shared/Bliss-Moreau_Machado_Videos/video_ebm_dataset';
         cclab.matlab_path = '/Users/username/Documents/MATLAB/cclab_movie_project/Code';
     case 'dev_wsl'
         cclab.dummymode  = 1;
         cclab.filepath   = 'C:\Users\qmryan\Desktop\Bliss-Moreau_Machado_Videos\video_ebm_dataset';
-        cclab.matlab_path = fullfile(fileparts(mfilename('fullpath')));
+        cclab.matlab_path = 'Q:\home\qix\dev\cclab_movie_project\Code';
     otherwise
         error('CONFI: unknown computer_name "%s" — add a case to the switch block.', cclab.computer_name);
 end
