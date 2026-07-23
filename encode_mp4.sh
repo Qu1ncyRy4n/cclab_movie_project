@@ -34,8 +34,13 @@ encode_one() {
     local dst="$DST/${base}.mp4"
 
     if [[ -f "$dst" ]]; then
-        echo "[skip] $base.mp4 already exists"
-        return
+        if ffprobe -v error -select_streams v:0 -show_entries stream=codec_name \
+                -of default=noprint_wrappers=1 "$dst" &>/dev/null; then
+            echo "[skip] $base.mp4 already exists and is valid"
+            return
+        else
+            echo "[redo] $base.mp4 exists but is corrupt/incomplete — re-encoding"
+        fi
     fi
 
     echo "[encode] $base.mpg → $base.mp4"
