@@ -140,7 +140,7 @@ try
     if ~exist(practiceMovieDir, 'dir') && cclab.practiceBlockSize > 0 
         error('Practice movie directory not found: %s', practiceMovieDir);
     end
-    practiceMpgFiles = dir(fullfile(practiceMovieDir,'*.mpg'));
+    practiceMpgFiles = dir(fullfile(practiceMovieDir,'*.mp4'));
     allPracticeMovies = [practiceMpgFiles];
     numPracticeAvailable = numel(practiceMpgFiles);
 

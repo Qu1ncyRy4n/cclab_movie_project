@@ -4,7 +4,7 @@ function trials = pseudorandomization(n_per_category, filepath)
 % one social-directed, and one social-undirected video in a random order.
 %
 % Fields per element:
-%   .filepath   full path to the .mpg file
+%   .filepath   full path to the .mp4 file
 %   .name       filename only (for logging)
 %   .category   'nature' | 'social_directed' | 'social_undir'
 %
@@ -17,8 +17,8 @@ videoDir = fullfile(filepath, 'video_all');
 scriptDir = fileparts(mfilename('fullpath'));
 manifest  = fullfile(scriptDir, '..', 'video_ebm_dataset', 'MANIFEST.csv');
 
-% Get all .mpg files from video_all
-allFiles = dir(fullfile(videoDir, '*.mpg'));
+% Get all .mp4 files from video_all
+allFiles = dir(fullfile(videoDir, '*.mp4'));
 
 % Read MANIFEST and build per-category lists
 T = readtable(manifest);
@@ -49,10 +49,13 @@ end
 % ---------------------------------------------------------------------------
 
 function subset = filterByCategory(allFiles, T, colName, videoDir)
-% Returns trial structs for files in video_all that MANIFEST marks as colName==1
+% Returns trial structs for files in video_all that MANIFEST marks as colName==1.
+% Matching is done by basename (no extension) so MANIFEST need not be updated
+% when video files are re-encoded to a different format.
 categoryNames = string(T.filename(T.(colName) == 1));
-allNames      = string({allFiles.name}');
-mask          = ismember(allNames, categoryNames);
+[~, catBase, ~] = cellfun(@fileparts, cellstr(categoryNames), 'UniformOutput', false);
+[~, allBase, ~] = cellfun(@fileparts, {allFiles.name},        'UniformOutput', false);
+mask = ismember(allBase, catBase);
 matchedFiles  = allFiles(mask);
 
 category = strrep(colName, 'video_', '');
@@ -74,7 +77,7 @@ end
 function checkCount(found, needed, category, videoDir, manifest)
 if found < needed
     error('pseudorandomization:notEnoughFiles', ...
-        ['%s: found %d .mpg file(s) in\n  %s\nmatching MANIFEST, but need %d.\n' ...
+        ['%s: found %d .mp4 file(s) in\n  %s\nmatching MANIFEST, but need %d.\n' ...
          'Check that video_all/ is populated and %s is up to date.'], ...
         category, found, videoDir, needed, manifest);
 end
