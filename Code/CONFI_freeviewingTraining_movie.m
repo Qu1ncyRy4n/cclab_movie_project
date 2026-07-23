@@ -7,7 +7,7 @@ function cclab = CONFI_freeviewingTraining_movie()
 %% Basic Info
 % 0 => real EyeLink tracking 
 % 1 => dummy mode using mouse input
-cclab.dummymode      = 1;
+cclab.dummymode      = 0;
 cclab.operating_system = "Windows11"; 
 
 if cclab.dummymode == 1
