@@ -1,6 +1,10 @@
 .DS_Store
 Output_freeviewingTraining/
 paths.cfg
+.direnv/
+.ipynb_checkpoints/
+Data/Pilot data/*/*.asc
+Data/Pilot data/*/results.csv
 
 video_ebm_dataset/video_all/
 video_ebm_dataset/video_nature/

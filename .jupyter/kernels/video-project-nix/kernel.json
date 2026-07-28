@@ -1,0 +1,15 @@
+{
+  "argv": [
+    "/nix/var/nix/profiles/default/bin/nix",
+    "develop",
+    "path:/Users/q/Documents/Code/Research/CogCtrlLab/Video%20project",
+    "--command",
+    "python",
+    "-m",
+    "ipykernel_launcher",
+    "-f",
+    "{connection_file}"
+  ],
+  "display_name": "Video Project (Nix via Codium)",
+  "language": "python"
+}
