@@ -43,6 +43,10 @@ cclab.randomSeed   = 1; % 1 for Vennie
 %% Block size
 cclab.practiceBlockSize = 0; % Number of practice trials (I always had this set to 0, not sure if movie code will work if it's set to something else)
 cclab.moviespertype = 2;     % Number of movies from each type (nature, social directed, social not directed)
+
+% Restrict movie selection to the hand-vetted subset flagged pilot_ready=1 in
+% MANIFEST.csv. Set true during piloting; false for real data collection.
+cclab.pilot = false;
 %cclab.blocksize  = 10;      % Number of main experiment trials (this is not used for movie paradigm)
 %cclab.numinarow = 3;        % Maximal number of movies from one type that can be played in a row (this ended up being unused)
 

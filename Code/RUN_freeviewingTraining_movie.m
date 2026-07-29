@@ -157,7 +157,7 @@ try
     shuffledPracticeFiles = allPracticeMovies(practiceIdx);
 
     % --- Part 2: Load and shuffle MAIN movies ---
-    shuffledMainFiles = pseudorandomization(cclab.moviespertype, cclab.filepath);
+    shuffledMainFiles = pseudorandomization(cclab.moviespertype, cclab.filepath, cclab.pilot);
     mainBlockSize = length(shuffledMainFiles);
     %mainBlockSize = 3*cclab.moviespertype; % 3 types of movies, nature/social directed/social not directed
 

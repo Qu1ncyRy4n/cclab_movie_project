@@ -1,7 +1,12 @@
-function trials = pseudorandomization(n_per_category, filepath)
+function trials = pseudorandomization(n_per_category, filepath, pilotOnly)
 % Returns a struct array of length 3*n_per_category describing the main
 % trial sequence. Each group of 3 consecutive trials contains one nature,
 % one social-directed, and one social-undirected video in a random order.
+%
+% pilotOnly (optional, default false): if true, restricts selection to
+% videos flagged pilot_ready=1 in MANIFEST.csv (a small hand-vetted subset
+% for piloting). Errors if fewer than n_per_category pilot_ready videos
+% exist in a category.
 %
 % Fields per element:
 %   .filepath   full path to the .mp4 file
@@ -10,6 +15,10 @@ function trials = pseudorandomization(n_per_category, filepath)
 %
 % Category membership is read from MANIFEST.csv so only video_all/ is
 % needed on disk — no per-category subfolders required.
+
+if nargin < 3
+    pilotOnly = false;
+end
 
 videoDir = fullfile(filepath, 'video_all');
 
@@ -22,14 +31,17 @@ allFiles = dir(fullfile(videoDir, '*.mp4'));
 
 % Read MANIFEST and build per-category lists
 T = readtable(manifest);
+if pilotOnly
+    T = T(T.pilot_ready == 1, :);
+end
 natureFiles      = filterByCategory(allFiles, T, 'video_nature',          videoDir);
 directedFiles    = filterByCategory(allFiles, T, 'video_social_directed', videoDir);
 notdirectedFiles = filterByCategory(allFiles, T, 'video_social_undir',    videoDir);
 
 % Validate counts before attempting randperm
-checkCount(numel(natureFiles),      n_per_category, 'video_nature',          videoDir, manifest);
-checkCount(numel(directedFiles),    n_per_category, 'video_social_directed', videoDir, manifest);
-checkCount(numel(notdirectedFiles), n_per_category, 'video_social_undir',    videoDir, manifest);
+checkCount(numel(natureFiles),      n_per_category, 'video_nature',          videoDir, manifest, pilotOnly);
+checkCount(numel(directedFiles),    n_per_category, 'video_social_directed', videoDir, manifest, pilotOnly);
+checkCount(numel(notdirectedFiles), n_per_category, 'video_social_undir',    videoDir, manifest, pilotOnly);
 
 % Randomly select n_per_category from each category
 selectedNature      = natureFiles(randperm(numel(natureFiles),      n_per_category));
@@ -74,11 +86,18 @@ end
 subset = subset(:);
 end
 
-function checkCount(found, needed, category, videoDir, manifest)
+function checkCount(found, needed, category, videoDir, manifest, pilotOnly)
 if found < needed
-    error('pseudorandomization:notEnoughFiles', ...
-        ['%s: found %d .mp4 file(s) in\n  %s\nmatching MANIFEST, but need %d.\n' ...
-         'Check that video_all/ is populated and %s is up to date.'], ...
-        category, found, videoDir, needed, manifest);
+    if pilotOnly
+        error('pseudorandomization:notEnoughFiles', ...
+            ['%s: found %d pilot_ready .mp4 file(s) in\n  %s\nmatching MANIFEST, but need %d.\n' ...
+             'Flag more rows pilot_ready=1 for this category in %s.'], ...
+            category, found, videoDir, needed, manifest);
+    else
+        error('pseudorandomization:notEnoughFiles', ...
+            ['%s: found %d .mp4 file(s) in\n  %s\nmatching MANIFEST, but need %d.\n' ...
+             'Check that video_all/ is populated and %s is up to date.'], ...
+            category, found, videoDir, needed, manifest);
+    end
 end
 end

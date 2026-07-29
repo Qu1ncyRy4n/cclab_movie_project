@@ -92,9 +92,11 @@ full screen height, centered horizontally (`movieDstRects{}`). Frame loop uses
 
 ## Movie selection / randomization
 
-`pseudorandomization(n_per_category, filepath)`:
+`pseudorandomization(n_per_category, filepath, pilotOnly)`:
 - Reads `video_ebm_dataset/MANIFEST.csv` (from repo, not from video path) to
   determine which files in `video_all/` belong to each category.
+- If `pilotOnly` (= `cclab.pilot`) is true, first restricts to rows where
+  `pilot_ready==1` in MANIFEST.csv before category filtering.
 - Picks `n_per_category` random `.mpg` per category (nature / social_directed /
   social_undir), interleaves so every consecutive block of 3 has one of each
   type in random order.
@@ -120,7 +122,8 @@ with the new trial struct format. See open issues below.
 | `useFixedSeed` / `randomSeed` | false / 1 | reproducible movie order |
 | `filepath` | auto from `computer_name` | video root (set via the switch block in CONFI) |
 | `practiceBlockSize` | 0 | practice trials (keep 0) |
-| `moviespertype` | 2 (code) / 3 (pilot) | movies per category → total = 3× |
+| `pilot` | false | if true, restricts movie selection to `pilot_ready=1` rows in MANIFEST.csv (currently 3/category) |
+| `moviespertype` | 2 (code) / 3 (pilot) | movies per category → total = 3×. With `pilot=true`, must be ≤ number of `pilot_ready` videos in the smallest category |
 | `t_waitfixation_fp` | 5 s | max time to acquire fixation |
 | `t_fixation_fp` | 0.8 s (pilot 0.5) | required hold before movie |
 | `t_fixdot_on_image` | 0.8 s (pilot 0) | dot-on-movie enforced phase |
@@ -274,6 +277,13 @@ run** above for the full rig checklist.
   will crash because practice files are raw `dir()` structs; needs to build
   `.filepath/.name/.category` structs instead. Low priority: practice is unused.
 - [x] **`MovieCategory` added to Results table** (2026-07-29).
+- [x] **`MovieOff` added to Results table + `MovieOff_N` EDF message** (2026-07-29)
+  — marks when playback actually stopped (natural end, ESC, or phase-1 fixation
+  break), so viewing duration is directly computable per trial.
+- [x] **Pilot-subset restriction added** (2026-07-29) — `pilot_ready` column in
+  `MANIFEST.csv` (default 0; currently 3 videos per category flagged 1, picked
+  automatically and awaiting manual QC), `cclab.pilot` flag in CONFI (default
+  `false`), filtered in `pseudorandomization.m` when `cclab.pilot=true`.
 - [ ] **`VideoDuration_s` / `VideoWidth` / `VideoHeight` not yet captured** — free
   from `Screen('OpenMovie')` return values (currently discarded with `~`), worth
   adding before real data collection.
