@@ -159,18 +159,39 @@ start** unless noted):
 | `TrialSuccess` | double | 1 if rewarded, 0 if aborted |
 | `RewardSize` | double | reward ms delivered |
 | `ImageShown` | string | movie filename |
+| `MovieCategory` | string | `nature` / `social_directed` / `social_undir` — see key below |
 | `ImageRect` | cell | [left top right bottom] px |
 | `TrialStart` | double | 0 (reference) |
 | `FixStart` | double | ms when fixation acquired |
 | `FixEnd` | double | ms when hold completed |
 | `ImageOn` | double | ms movie onset |
 | `DotOff` | double | ms fixation dot removed (phase-1 end) |
+| `MovieOff` | double | ms movie playback stopped — natural end, ESC, or fixation break during phase-1 (`AbortPhase="ImageDot"`) |
 | `AbortPhase` | string | "None" / "Wait_for_fixation" / "Hold_fix" / "ImageDot" |
 
+**`MovieCategory` key** — set from `pseudorandomization.m`'s `.category` field,
+which is looked up per-video from `video_ebm_dataset/MANIFEST.csv`:
+
+| Value | Source column in MANIFEST.csv |
+|---|---|
+| `nature` | `video_nature` |
+| `social_directed` | `video_social_directed` |
+| `social_undir` | `video_social_undir` |
+
+For the underlying content of each video (what's actually depicted, e.g.
+"Landscape/Flowers", "Aggression"), see `Machado et al. 2011 Video Content.csv`;
+for psychological ratings (valence, dominance, arousal) see `Bliss-Moreau,
+Machado, & Amaral, 2013 Video Rating.csv` — both in `video_ebm_dataset/`, joined
+on filename.
+
 **EyeLink message markers** in the EDF (for alignment): `TrialStart_N`,
-`FixInFP_N`, `ImageOn_N`, `DotOff_N`, `Reward_N`. EDF sample data includes
-GAZE/HREF/RAW/AREA (see `file_sample_data` command in RUN_ ~line 273). Parse EDF
-with EyeLink's `edf2asc` or a MATLAB EDF reader.
+`FixInFP_N`, `ImageOn_N`, `DotOff_N`, `MovieOff_N`, `Reward_N`. `MovieOff_N` marks
+when playback actually stopped — natural end, ESC, or a phase-1 fixation break
+— so `MovieOff_N` − `ImageOn_N` gives per-trial viewing duration directly from
+the EDF, useful for sanity-checking against the video's known length, spotting
+unexpected delays between movies, and diagnosing crash/abort trials. EDF sample
+data includes GAZE/HREF/RAW/AREA (see `file_sample_data` command in RUN_ ~line
+273). Parse EDF with EyeLink's `edf2asc` or a MATLAB EDF reader.
 
 ### Pilot data note
 `demo_2026-03-05_1439.mat`: config shows `moviespertype=3` (9 movies),
@@ -252,12 +273,10 @@ run** above for the full rig checklist.
 - [ ] **Practice block incompatible with new struct** — `practiceBlockSize > 0`
   will crash because practice files are raw `dir()` structs; needs to build
   `.filepath/.name/.category` structs instead. Low priority: practice is unused.
-- [ ] **Results table not yet updated** — `VideoCategory`, `VideoDuration_s`, and
-  `VideoWidth`/`VideoHeight` are not yet captured in the Results table. These are
-  free from `Screen('OpenMovie')` return values and worth adding before real data
-  collection.
-- [ ] **Console debug print not yet added** — wanted a per-trial category print to
-  MATLAB command window (e.g. `[Trial 3] category: nature | file: 00181DVD.mp4`).
+- [x] **`MovieCategory` added to Results table** (2026-07-29).
+- [ ] **`VideoDuration_s` / `VideoWidth` / `VideoHeight` not yet captured** — free
+  from `Screen('OpenMovie')` return values (currently discarded with `~`), worth
+  adding before real data collection.
 - [ ] **`TrialType` column is always "Main"** — "Practice" path is dead; column
   is vestigial. Either remove or repurpose.
 - [ ] **Move encoded videos to NAS** — re-encoding .mpg → .mp4 in progress (see
