@@ -29,7 +29,6 @@ Video project/
 │   ├── video_social_undir/    (gitignored)
 │   ├── video_boundary/        (gitignored)
 │   └── video_clipped/         (gitignored)
-├── paths.cfg.template                    ← add your machine here; set computer_name in paths.cfg
 └── readme_snovik.docx                    ← original rotation notes
 ```
 
@@ -39,11 +38,10 @@ which must contain subfolders `video_all/`, `video_nature/`, `video_social_direc
 `video_social_undir/`. See `video_ebm_dataset/MANIFEST.csv` for the full expected
 file list and `dataset_licensing_citation.md` for attribution requirements.
 
-To set your local path: copy `paths.cfg.template` → `paths.cfg` (gitignored) and
-set `computer_name` to the section in the template that matches this machine (e.g.
-`computer_name = lab_120`). If your machine isn't listed, add a `[section]` to the
-template and commit it. See the template for NAS mounting instructions per OS.
-`CONFI_` reads `paths.cfg` at startup.
+To configure a machine: set `computer_name` at the top of
+`CONFI_freeviewingTraining_movie.m` to match the machine, then add a `case` to
+the switch block with its `dummymode` and `filepath`. Lab rigs auto-get
+`dummymode=0`; all others get `dummymode=1`.
 
 ## How to run
 
@@ -116,10 +114,10 @@ with the new trial struct format. See open issues below.
 
 | Param | Pilot / default | Meaning |
 |---|---|---|
-| `dummymode` | 1 (code) / 0 (pilot ran real) | 0=EyeLink, 1=mouse |
-| `operating_system` | "Windows11" | "MacOS" / "Linux" / "Windows11" — sets NAS fallback path if no paths.cfg |
+| `computer_name` | 'dev_wsl' | which machine — sets `dummymode` and `filepath` automatically; add a `case` for new machines |
+| `dummymode` | auto (0 for lab rigs, 1 otherwise) | 0=EyeLink, 1=mouse |
 | `useFixedSeed` / `randomSeed` | false / 1 | reproducible movie order |
-| `filepath` | read from paths.cfg | video root — looked up via `computer_name` in `paths.cfg.template`; falls back to OS default |
+| `filepath` | auto from `computer_name` | video root (set via the switch block in CONFI) |
 | `practiceBlockSize` | 0 | practice trials (keep 0) |
 | `moviespertype` | 2 (code) / 3 (pilot) | movies per category → total = 3× |
 | `t_waitfixation_fp` | 5 s | max time to acquire fixation |
@@ -214,12 +212,10 @@ Do this first to see the task work on your own laptop.
 1. Open MATLAB.
 2. In the **Current Folder** panel (or `cd` in the Command Window), navigate to
    the `Code/` folder of this project so it's the working directory.
-3. Open `CONFI_freeviewingTraining_movie.m` in the editor. Set:
-   - `dummymode = 1;`  → gaze follows your **mouse** instead of an eye tracker.
-   - Copy `paths.cfg.template` → `paths.cfg` in the repo root. Set
-     `computer_name` to the matching `[section]` (or add a new one and commit
-     it). If testing off-network, set `video_path` to a local folder of `.mpg`
-     files inside a `video_all/` subfolder.
+3. Open `CONFI_freeviewingTraining_movie.m` in the editor. At the top:
+   - Set `computer_name` to your machine (e.g. `'macbook_pro'`). If it's not
+     listed, add a `case` to the switch block with `dummymode = 1` and the path
+     to a local folder of `.mpg` files inside a `video_all/` subfolder.
    - `moviespertype = 1;` → short session while testing.
    Save the file (Ctrl/Cmd-S).
 4. In the Command Window, type the run command **without** `.m` and press Enter:
@@ -273,16 +269,15 @@ before trials. See **How to run** above for the full rig checklist.
 
 ## Devlog
 
+### 2026-07-23
+- **Machine config simplified** — `paths.cfg` / `paths.cfg.template` system removed.
+  `CONFI` now has a single `computer_name` variable at the top; a `switch` block
+  sets both `dummymode` and `filepath` automatically. Lab rigs (`lab_120`,
+  `lab_121`) get `dummymode=0` (real EyeLink); all other machines get `dummymode=1`
+  (mouse). To add a new machine, add one `case` to the switch.
+
 ### 2026-07-22
-- **`paths.cfg` system reworked to per-machine named configs** — `paths.cfg.template`
-  now uses INI-style `[machine_name]` sections (`lab_120`, `lab_121`, `macbook_pro`,
-  `dev_wsl`). Local `paths.cfg` (gitignored) sets `computer_name = <section>`;
-  CONFI looks up `video_path` from that section in the template. Old flat-key
-  `filepath = ...` still works as a fallback for backward compat. Motivation: flat
-  `filepath` key failed on other lab computers because each has a different NAS
-  mount or local path — tracked sections make the right path per machine explicit.
-- Each section also has a `matlab_path` for documentation (where the repo lives on
-  that machine); not yet used by CONFI but useful reference.
+- **`paths.cfg` system introduced** (superseded 2026-07-23 — see above).
 
 ### 2026-07-16
 - **`pseudorandomization.m` fully rewritten** — no longer reads from per-category

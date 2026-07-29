@@ -4,15 +4,25 @@ function cclab = CONFI_freeviewingTraining_movie()
 % Returns a struct 'cclab' containing configuration parameters
 % for a freeviewing training experiment.
 
-%% Basic Info
-% 0 => real EyeLink tracking 
-% 1 => dummy mode using mouse input
-cclab.dummymode      = 0;
-cclab.operating_system = "Windows11"; 
+%% Machine / rig identity
+% Set computer_name to match this machine.
+% Lab rigs (lab_120, lab_121) run real EyeLink (dummymode = 0).
+% All other machines default to mouse testing (dummymode = 1).
+% To add a new machine: add a case with its dummymode and filepath.
+cclab.computer_name = 'dev_wsl';
 
-if cclab.dummymode == 1
-    SkipSyncTests = 1;
-    Screen('Preference', 'SkipSyncTests', 1);
+switch cclab.computer_name
+    case {'lab_120', 'lab_121'}
+        cclab.dummymode = 0;
+        cclab.filepath  = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset';
+    case 'macbook_pro'
+        cclab.dummymode = 1;
+        cclab.filepath  = '/Volumes/cclab/shared/Bliss-Moreau_Machado_Videos/video_ebm_dataset';
+    case 'dev_wsl'
+        cclab.dummymode = 1;
+        cclab.filepath  = 'C:\Users\qmryan\Desktop\Bliss-Moreau_Machado_Videos\video_ebm_dataset';
+    otherwise
+        error('CONFI: unknown computer_name "%s" — add a case to the switch block.', cclab.computer_name);
 end
 
 %% Seeding for Randomization
@@ -21,36 +31,6 @@ end
 cclab.useFixedSeed = false; 
 % The specific seed for the random number generator.
 cclab.randomSeed   = 1; % 1 for Vennie
-
-%% Filepath
-% video_path points to video_ebm_dataset/ and must contain video_all/.
-% Set computer_name in paths.cfg (copy from paths.cfg.template, gitignored).
-% CONFI reads paths.cfg → looks up video_path in the named section of paths.cfg.template.
-repoRoot  = fullfile(fileparts(mfilename('fullpath')), '..');
-pathsCfg  = fullfile(repoRoot, 'paths.cfg');
-pathsTmpl = fullfile(repoRoot, 'paths.cfg.template');
-
-cclab.filepath = '';
-if exist(pathsCfg, 'file')
-    computerName = cfgKey(pathsCfg, '', 'computer_name');
-    if ~isempty(computerName) && exist(pathsTmpl, 'file')
-        cclab.filepath = cfgKey(pathsTmpl, computerName, 'video_path');
-    end
-    if isempty(cclab.filepath)           % legacy: flat 'filepath' key in paths.cfg
-        cclab.filepath = cfgKey(pathsCfg, '', 'filepath');
-    end
-end
-
-if isempty(cclab.filepath)
-    % OS defaults — create paths.cfg from paths.cfg.template to override
-    if cclab.operating_system == "MacOS"
-        cclab.filepath = '/Volumes/cclab/shared/Bliss-Moreau_Machado_Videos/video_ebm_dataset';
-    elseif cclab.operating_system == "Linux"
-        cclab.filepath = '/mnt/cclab/shared/Bliss-Moreau_Machado_Videos/video_ebm_dataset';
-    else % Windows
-        cclab.filepath = 'C:\Users\qmryan\Desktop\Bliss-Moreau_Machado_Videos\video_ebm_dataset';
-    end
-end
 
 %% Block size
 cclab.practiceBlockSize = 0; % Number of practice trials (I always had this set to 0, not sure if movie code will work if it's set to something else)
@@ -129,34 +109,4 @@ end
 
 % The size (in deg of visual angle) of the drawn reward image on the screen
 cclab.rewardImageDimDeg = 6;
-end
-
-% ---------------------------------------------------------------------------
-function val = cfgKey(filename, section, key)
-% Read key from an INI-style config. section='' reads global (pre-section) keys.
-val = '';
-fid = fopen(filename, 'r');
-if fid < 0, return; end
-inTarget = isempty(section);
-while true
-    line = fgetl(fid);
-    if ~ischar(line), break; end
-    line = strtrim(line);
-    if isempty(line) || line(1) == '#' || line(1) == ';', continue; end
-    if line(1) == '['
-        br = find(line == ']', 1);
-        if ~isempty(br)
-            inTarget = strcmpi(strtrim(line(2:br-1)), section);
-        end
-        continue;
-    end
-    if ~inTarget, continue; end
-    eq = find(line == '=', 1);
-    if isempty(eq), continue; end
-    if strcmpi(strtrim(line(1:eq-1)), key)
-        val = strtrim(line(eq+1:end));
-        break;
-    end
-end
-fclose(fid);
 end
