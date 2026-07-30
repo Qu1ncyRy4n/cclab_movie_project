@@ -123,7 +123,7 @@ with the new trial struct format. See open issues below.
 | `filepath` | auto from `computer_name` | video root (set via the switch block in CONFI) |
 | `practiceBlockSize` | 0 | practice trials (keep 0) |
 | `pilot` | false | if true, restricts movie selection to `pilot_ready=1` rows in MANIFEST.csv (currently 3/category) |
-| `moviespertype` | 2 (code) / 3 (pilot) | movies per category → total = 3×. With `pilot=true`, must be ≤ number of `pilot_ready` videos in the smallest category |
+| `moviespertype` | 3 | movies per category → total main trials = 3×. With `pilot=true`, must be ≤ number of `pilot_ready` videos in the smallest category (currently exactly 3, zero margin) |
 | `t_waitfixation_fp` | 5 s | max time to acquire fixation |
 | `t_fixation_fp` | 0.8 s (pilot 0.5) | required hold before movie |
 | `t_fixdot_on_image` | 0.8 s (pilot 0) | dot-on-movie enforced phase |
@@ -296,8 +296,113 @@ run** above for the full rig checklist.
   the repo root so it's easy to find on the Windows machine.
 - [ ] **Boundary video support** — not wired up. Add `video_boundary` column to
   MANIFEST, extend `pseudorandomization.m` with a 4th category and group size.
+- [x] **`MANIFEST.csv` embedded `\r` — fixed** (2026-07-29). Confirmed as the
+  cause of `Unrecognized table variable name 'pilot_ready'` on the test rig
+  (the corruption broke `readtable`'s column parsing, not just cosmetic).
+  Regenerated with `\r` stripped from every field.
+- [x] **`pilot_ready` picks corrected** (2026-07-29) — replaced the
+  aggression-themed `social_directed`/`social_undir` picks with
+  `neutral_cam_directed01-03` and `foraging01-03`. Still only 3/category
+  (zero margin); revisit sizing the pilot subset larger once you're ready to
+  hand-vet more.
+- [x] **Per-trial EyeLink recording — fixed** (2026-07-29). `StartRecording`
+  now fires at the top of `Trial_start` (after a one-time bootstrap before the
+  loop to detect `eyeUsed` and set drift correction), `StopRecording` fires at
+  the end of `ITI`. A `recordingActive` flag guards the `CheckRecording`
+  health-check loop so the intentional per-trial stop isn't mistaken for a
+  tracker failure.
+- [ ] **No EyeLink signaling overview exists** — need a doc listing every
+  `Eyelink('Message', ...)` and `Eyelink('Command', ...)` call, when it fires,
+  and what it's for. Surfaced as a gap during pilot testing.
+- [x] **Total data loss on early crash — fixed** (2026-07-29). The `catch`
+  block now does a best-effort save of `Results`/`cclab` (falling back to a
+  `crash_<timestamp>/` folder if `outFolder`/`outMat` were never assigned) plus
+  an `error_log.txt` with the full error report — so a crash always leaves
+  something on disk, and the error text is captured for next time (helps the
+  still-open "repo code failed to run as-is" item below).
+- [x] **Repo code failure on test rig — root-caused from `errors_2026-07-29.md.txt`**
+  (2026-07-29). Three distinct issues, not one: (1) `pilot_ready` column error
+  → the MANIFEST corruption above; (2) `matlab_path` for `lab_120`/`lab_121`
+  was hardcoded to a personal username (`qmryan`) instead of the rig's actual
+  shared Windows account (`cclab`, confirmed from the `addpath` warning in the
+  log) — fixed in CONFI; (3) PTB `SYNCHRONIZATION FAILURE` / "impossible
+  stimulus onset" — Windows DWM compositor interfering with VBL timing
+  detection on this rig's GPU (PTB 3.0.18, AMD Radeon RX550); this is a
+  **display-timing issue, unrelated to TTL/hardware sync** — see the
+  TTL/signaling item below for why. Not yet resolved; workaround is
+  `SkipSyncTests=1` with the tradeoff that stimulus timing precision is then
+  unverified — needs a decision before real data collection (pilot vs. final).
+- [ ] **PTB VBL sync failure on lab rig (DWM compositor)** — separate from all
+  EyeLink/TTL sync topics. Options: force `SkipSyncTests=1` (already the
+  `dummymode`-linked default off-rig, not on it) and accept unverified timing;
+  try disabling/working around DWM; update GPU driver; or investigate PTB's
+  `help SyncTrouble`. Undecided.
+- [ ] **TTL sync pulses added but commented out** (2026-07-29) — `cclabPulse('A')`
+  at movie onset, `cclabPulse('B')` at movie offset (both `MovieOff` sites).
+  Disabled until Brinda confirms line assignment/timing against the Neuropixel
+  setup; do not enable blind.
 
 ## Devlog
+
+### 2026-07-29 (later)
+- **Test rig error log (`errors_2026-07-29.md.txt`) reviewed and root-caused**
+  — three independent bugs, not one, plus a terminology mix-up worth recording:
+  "sync error" was used loosely for two *completely different* things this
+  session. (1) EyeLink/TTL sync = aligning event timing across separate
+  recording devices (behavior rig, neural rig) — `cclabPulse`/TTL is the tool
+  for that, and it's not currently wired up (see open issues). (2) PTB's
+  `SYNCHRONIZATION FAILURE` = a display-timing self-test (checking whether
+  `Screen('Flip')` lands on the true vertical blank), broken here by Windows' DWM compositor
+  — nothing to do with TTL or cross-device sync at all. Conflating the two
+  would have meant "fixing" the wrong layer. Fixed: MANIFEST `\r` corruption
+  (confirmed as the actual cause of the `pilot_ready` column error, not just
+  cosmetic) and the `lab_120`/`lab_121` `matlab_path` (hardcoded to a personal
+  username instead of the rig's shared `cclab` account). Still open: the DWM
+  sync failure itself, and whether TTL output is actually needed for the
+  neural recording pipeline.
+- **Per-trial EyeLink recording** — `StartRecording`/`StopRecording` now
+  bracket each trial (`Trial_start`/`ITI`) instead of the whole session, per
+  feedback from the test rig ("detecting as one trial, delimit trials").
+- **Crash-safety save added** — `catch` block now saves partial `Results`,
+  `cclab`, and an `error_log.txt` even if the crash happened before the output
+  folder was ever created, directly motivated by "it didn't write any data" on
+  the test rig.
+
+### 2026-07-29
+- **Pilot dry-run on rig test copy** — repo code as pulled did not run; a
+  separate folder (`cclab_movie_project_teste_1737`) with ad hoc manual edits
+  did display. The exact error from the unmodified repo was not captured —
+  needs reproducing so it can be fixed at the source rather than patched
+  per-copy. See open issues above for the concrete list of problems found
+  during this test: MANIFEST corruption, wrong pilot category picks, single
+  continuous EyeLink recording instead of per-trial, no signaling overview,
+  fixation-vs-free-view ambiguity (resolved — see below), and total data loss
+  on crash.
+- **Fixation is NOT required during free-viewing (phase 2)** — confirmed from
+  code: `t_fixdot_on_image` (phase 1, dot-on-movie) is the only fixation-gated
+  phase; once the dot is removed (`DotOff`), the movie keeps playing to its
+  natural end regardless of gaze. `TrialSuccess=1` only reflects holding
+  through phase 1. Already noted under Gotchas above; re-confirmed here after
+  it came up as a question during pilot testing.
+- **Considered: ground-up rewrite in PsychoPy against a different eye
+  tracker**, motivated by (a) the Psychtoolbox Windows licensing wall hit
+  earlier this session (3.0.20+ requires a paid key; see PTB devlog below),
+  (b) the lab's interest in a FOSS stack, (c) wanting a reusable lab template
+  instead of continuing to patch inherited MATLAB code not fully understood by
+  whoever is currently maintaining it, and (d) the learning value of designing
+  the paradigm from scratch rather than reverse-engineering it. Decision: not
+  now — decoupled from this pilot. Continue patching the current MATLAB/PTB
+  paradigm through pilot data collection; treat the PsychoPy rewrite as a
+  separate, deliberately-scoped project (spec doc first, same as the deferred
+  video-parser problem) once pilot pressure is off. Rationale: a rewrite also
+  means re-implementing the lab's hardware integration currently in
+  `cclab-matlab-tools` (DIO reward pump, millikey, joystick) against a new
+  tracker's SDK — substantial new-unknowns on top of an imminent data
+  deadline, not a same-week swap.
+- **Psychtoolbox Windows license issue hit and worked around** — 3.0.20+
+  requires a paid subscription after a short trial (macOS/Windows only; Linux
+  stays free). Rolled back to 3.0.19.16 ("Last free dessert"), the last release
+  before the licensing requirement was introduced.
 
 ### 2026-07-23
 - **Video format switched to H.264 `.mp4`** — original `.mpg` files (MPEG-2) are

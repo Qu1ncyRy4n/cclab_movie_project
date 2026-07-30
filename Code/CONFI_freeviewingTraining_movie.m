@@ -20,15 +20,22 @@ switch cclab.computer_name
     case {'lab_120', 'lab_121'}
         cclab.dummymode  = 0;
         cclab.filepath   = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset'; % file path requires video_all/ and MANIFEST.csv
-        cclab.matlab_path = 'C:\Users\qmryan\Desktop\cclab_movie_project\Code';
+        cclab.matlab_path = 'C:\Users\cclab\Desktop\cclab_movie_project\Code'; % rig Windows account is 'cclab', not a personal username
+        % Screen 2 + fullscreen fixed a PTB VBL sync failure during pilot testing (2026-07-29).
+        cclab.ScreenNumber = 2;
+        cclab.screenSize   = [0 0];
     case 'q_mb_pro'
         cclab.dummymode  = 1;
         cclab.filepath   = '/Volumes/cclab/shared/Bliss-Moreau_Machado_Videos/video_ebm_dataset';
         cclab.matlab_path = '/Users/username/Documents/MATLAB/cclab_movie_project/Code';
+        cclab.ScreenNumber = 0;
+        cclab.screenSize   = [1080 720];
     case 'dev_wsl'
         cclab.dummymode  = 1;
         cclab.filepath   = 'C:\Users\qmryan\Desktop\Bliss-Moreau_Machado_Videos\video_ebm_dataset';
         cclab.matlab_path = 'Q:\home\qix\dev\cclab_movie_project\Code';
+        cclab.ScreenNumber = 0;
+        cclab.screenSize   = [1080 720];
     otherwise
         error('CONFI: unknown computer_name "%s" — add a case to the switch block.', cclab.computer_name);
 end
@@ -42,11 +49,11 @@ cclab.randomSeed   = 1; % 1 for Vennie
 
 %% Block size
 cclab.practiceBlockSize = 0; % Number of practice trials (I always had this set to 0, not sure if movie code will work if it's set to something else)
-cclab.moviespertype = 2;     % Number of movies from each type (nature, social directed, social not directed)
+cclab.moviespertype = 3;     % Number of movies from each type (nature, social directed, social not directed)
 
 % Restrict movie selection to the hand-vetted subset flagged pilot_ready=1 in
 % MANIFEST.csv. Set true during piloting; false for real data collection.
-cclab.pilot = false;
+cclab.pilot = true;
 %cclab.blocksize  = 10;      % Number of main experiment trials (this is not used for movie paradigm)
 %cclab.numinarow = 3;        % Maximal number of movies from one type that can be played in a row (this ended up being unused)
 
@@ -88,10 +95,7 @@ cclab.randreward = false;
 cclab.randper    = 0.8;
 
 %% Screen / PTB
-% The display index that Psychtoolbox will use (0 usually the main display)
-cclab.ScreenNumber  = 0;
-% [width height] in pixels of the display window (set [0 0] for full screen)
-cclab.screenSize    = [1080 720];
+% ScreenNumber and screenSize are set per-machine in the switch block above.
 % Whether to skip PTB sync tests (0 = normal, 1 = skip; skip can reduce timing accuracy)
 % Forced on in dummymode — sync tests fail on non-rig displays
 cclab.SkipSyncTests = cclab.dummymode;

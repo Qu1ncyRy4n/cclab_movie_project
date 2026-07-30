@@ -340,8 +340,11 @@ try
     trial_start_time = GetSecs;
 
     %% Eyelink
+    % One-time bootstrap: briefly start recording to determine which eye is
+    % tracked and set up drift correction, then stop. Recording is restarted
+    % per-trial below (Trial_start/ITI) instead of running continuously for
+    % the whole session, so each trial is a separately delimited recording.
     if useRealEyelink
-        % Start recording
         Eyelink('SetOfflineMode'); % Put tracker in idle/offline mode before recording
         Eyelink('StartRecording'); % Start tracker recording
         WaitSecs(0.1); % Allow some time to record a few samples before presenting first stimulus
@@ -354,9 +357,11 @@ try
         % Perform drift correction
         Eyelink('Command', 'drift_correct_cr_disable = OFF');
         Eyelink('Command', 'online_dcorr_refposn %i,%i', centerX, centerY);
+        Eyelink('StopRecording');
     else
         eyeUsed = NaN;
     end
+    recordingActive = false;
 
     while ~break_out
 
@@ -382,7 +387,7 @@ try
             %             end
         end
 
-        if useRealEyelink
+        if useRealEyelink && recordingActive
 
             % Check that eye tracker is  still recording. Otherwise close and transfer copy of EDF file to Display PC
             err = Eyelink('CheckRecording');
@@ -439,6 +444,9 @@ try
                     'AbortPhase'  ,"None");
 
                 if useRealEyelink
+                    Eyelink('StartRecording');
+                    WaitSecs(0.05); % let the tracker's buffer stabilize before the trial message
+                    recordingActive = true;
                     Eyelink('Message','TrialStart_%d',total_trials);
                 end
 
@@ -522,6 +530,7 @@ try
                 trialInfo.ImageOn = 1000*(GetSecs - trial_start_time);  % ms
                 if useRealEyelink
                     Eyelink('Message','ImageOn_%d', total_trials);
+                    % cclabPulse('A'); % TTL sync, movie onset — confirm line w/ Brinda first
                 end
 
                 % image + dot, enforce fixation
@@ -593,7 +602,10 @@ try
                         KbReleaseWait;
                         Screen('PlayMovie', chosenTex, 0);
                         trialInfo.MovieOff = 1000*(GetSecs - trial_start_time);  % ms
-                        if useRealEyelink, Eyelink('Message','MovieOff_%d', total_trials); end
+                        if useRealEyelink
+                            Eyelink('Message','MovieOff_%d', total_trials);
+                            % cclabPulse('B'); % TTL sync, movie offset — confirm line w/ Brinda first
+                        end
                         break
                     end
                 end
@@ -641,7 +653,10 @@ try
                     KbReleaseWait;
                     Screen('PlayMovie', chosenTex, 0);
                     trialInfo.MovieOff = 1000*(GetSecs - trial_start_time);  % ms
-                    if useRealEyelink, Eyelink('Message','MovieOff_%d', total_trials); end
+                    if useRealEyelink
+                        Eyelink('Message','MovieOff_%d', total_trials);
+                        % cclabPulse('B'); % TTL sync, movie offset — confirm line w/ Brinda first
+                    end
                     Screen('CloseMovie', chosenTex);
                     movieTextures{idx} = [];  % mark as closed so cleanup skips it
                 end
@@ -693,6 +708,11 @@ try
                 Results(end+1, :) = struct2table(trialInfo, 'AsArray', true);
                 save(outMat, 'Results', 'cclab');
 
+                if useRealEyelink
+                    Eyelink('StopRecording');
+                    recordingActive = false;
+                end
+
                 % stop when the required number of rewarded trials is reached
                 if total_success >= totalSessionSize
                     fprintf('Reached total trials = %d.\n', totalSessionSize);
@@ -735,9 +755,37 @@ try
 
 catch ME
     % This block runs if an error occurs or if the user stops the script.
-    
+
     fprintf('\n!!! --- SCRIPT INTERRUPTED --- !!!\n');
     fprintf('An error occurred: %s\n', ME.message);
+
+    % Best-effort save so a crash never means zero data on disk, even if it
+    % happened before outFolder/outMat were assigned (e.g. a MANIFEST/movie
+    % loading failure, which happens before EyeLink or Results even exist).
+    try
+        if ~exist('outFolder', 'var')
+            outFolder = fullfile(pwd, 'Output_freeviewingTraining', ...
+                ['crash_' datestr(now,'yyyy-mm-dd_HHMM')]);
+        end
+        if ~exist(outFolder, 'dir'), mkdir(outFolder); end
+        if ~exist('outMat', 'var')
+            outMat = fullfile(outFolder, 'crash_data.mat');
+        end
+
+        if exist('Results', 'var') && exist('cclab', 'var')
+            save(outMat, 'Results', 'cclab');
+        elseif exist('cclab', 'var')
+            save(outMat, 'cclab');
+        end
+
+        fid = fopen(fullfile(outFolder, 'error_log.txt'), 'w');
+        fprintf(fid, '%s\n\n%s', ME.message, getReport(ME));
+        fclose(fid);
+        fprintf('Saved crash diagnostics (partial data + error_log.txt) to:\n%s\n', outFolder);
+    catch saveErr
+        fprintf('Warning: failed to save crash diagnostics: %s\n', saveErr.message);
+    end
+
     fprintf('Attempting to save Eyelink data before exiting...\n\n');
 
     % Gracefully shut down EyeLink and transfer the data file
