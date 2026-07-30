@@ -7,6 +7,7 @@ clear all
 close all
 
 useRealEyelink = false;  % ponytail: default so the catch handler can't crash before line 109 sets it
+dioInitialized = false;
 
 try
     %% 1) Load config
@@ -107,10 +108,11 @@ try
     fixRad_px = round(fp_radius_deg * ppd);
     fixWin_px = round(fixWindow_deg * ppd);
 
-    %% 5) Initialize reward pump (only if not dummy)
+    %% 5) Initialize digital I/O (reward pump and TTL sync; only if not dummy)
     useRealEyelink = (dummymode_EYE == 0);
     if useRealEyelink
-        cclabInitDIO('jA');
+        cclabInitDIO('rig-right');
+        dioInitialized = true;
     end
 
     % HideCursor(screenNumber);
@@ -527,11 +529,7 @@ try
 
                 % -----------------------------------------------------------------
             case "Movie_present"
-                trialInfo.ImageOn = 1000*(GetSecs - trial_start_time);  % ms
-                if useRealEyelink
-                    Eyelink('Message','ImageOn_%d', total_trials);
-                    % cclabPulse('A'); % TTL sync, movie onset — confirm line w/ Brinda first
-                end
+                movieOnMarked = false;
 
                 % image + dot, enforce fixation
                 %t0 = GetSecs;
@@ -577,7 +575,15 @@ try
                         Screen('FillOval',window,fixColor, ...
                             [centerX+fp_x_px-fixRad_px, centerY-fp_y_px-fixRad_px, ...
                             centerX+fp_x_px+fixRad_px, centerY-fp_y_px+fixRad_px],8);
-                        Screen('Flip', window);
+                        movieOnTime = Screen('Flip', window);
+                        if ~movieOnMarked
+                            trialInfo.ImageOn = 1000*(movieOnTime - trial_start_time);  % ms
+                            if useRealEyelink
+                                Eyelink('Message','ImageOn_%d', total_trials);
+                                cclabPulse('A'); % TTL sync, movie onset
+                            end
+                            movieOnMarked = true;
+                        end
                         %Screen('Flip', window, [], [], 1);
                         Screen('Close', tex);
                     end
@@ -598,14 +604,15 @@ try
                         state = "ITI";
 
                         % If fixation lost, stop playback but don't close up the movie pointer (chosenTex) yet
-                        Screen('Flip', window);
-                        KbReleaseWait;
+                        Screen('FillRect',window,[128 128 128]);
+                        movieOffTime = Screen('Flip', window);
                         Screen('PlayMovie', chosenTex, 0);
-                        trialInfo.MovieOff = 1000*(GetSecs - trial_start_time);  % ms
+                        trialInfo.MovieOff = 1000*(movieOffTime - trial_start_time);  % ms
                         if useRealEyelink
                             Eyelink('Message','MovieOff_%d', total_trials);
-                            % cclabPulse('B'); % TTL sync, movie offset — confirm line w/ Brinda first
+                            cclabPulse('B'); % TTL sync, movie offset
                         end
+                        KbReleaseWait;
                         break
                     end
                 end
@@ -649,14 +656,15 @@ try
                     end
 
                     % Close everything up
-                    Screen('Flip', window);
-                    KbReleaseWait;
+                    Screen('FillRect',window,[128 128 128]);
+                    movieOffTime = Screen('Flip', window);
                     Screen('PlayMovie', chosenTex, 0);
-                    trialInfo.MovieOff = 1000*(GetSecs - trial_start_time);  % ms
+                    trialInfo.MovieOff = 1000*(movieOffTime - trial_start_time);  % ms
                     if useRealEyelink
                         Eyelink('Message','MovieOff_%d', total_trials);
-                        % cclabPulse('B'); % TTL sync, movie offset — confirm line w/ Brinda first
+                        cclabPulse('B'); % TTL sync, movie offset
                     end
+                    KbReleaseWait;
                     Screen('CloseMovie', chosenTex);
                     movieTextures{idx} = [];  % mark as closed so cleanup skips it
                 end
@@ -750,6 +758,11 @@ try
         Eyelink('ShutDown');
     end
 
+    if dioInitialized
+        cclabCloseDIO();
+        dioInitialized = false;
+    end
+
     %cleanup(window);   %ASK ORHAN ABOUT THIS?
     cleanup();
 
@@ -788,6 +801,11 @@ catch ME
 
     fprintf('Attempting to save Eyelink data before exiting...\n\n');
 
+    if dioInitialized
+        cclabCloseDIO();
+        dioInitialized = false;
+    end
+
     % Gracefully shut down EyeLink and transfer the data file
     if useRealEyelink
         Eyelink('StopRecording');
@@ -810,7 +828,7 @@ catch ME
         Eyelink('ShutDown');
         fprintf('Eyelink shut down.\n');
     end
-    
+
     % Close any pre-loaded movies still open
     if exist('movieTextures', 'var')
         for mi = 1:numel(movieTextures)
