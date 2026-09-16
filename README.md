@@ -9,12 +9,16 @@ rotation project (based on O. Soyuhos' 2025 fixation-training code).
 ```
 Video project/
 ├── Code/
-│   ├── RUN_freeviewingTraining_movie.m   ← run this
+│   ├── RUN_freeviewingTraining_movie.m   ← run this (original pilot task)
 │   ├── CONFI_freeviewingTraining_movie.m ← all params (set computer_name here)
 │   ├── pseudorandomization.m             ← movie-order picker
 │   ├── isaac_reward.png / wennie_reward.png  ← reward-screen images
+│   ├── exp01_transitions/                ← exp_01: transitions / interleave (own README)
 │   └── cclab-matlab-tools/               ← lab MATLAB utilities (git submodule)
 ├── encode_mp4.sh                         ← re-encode .mpg → H.264 .mp4 (run from WSL)
+├── probe_durations.sh                    ← per-video durations (header read, cheap)
+├── catalog_cuts.sh                       ← keyframe + scene-cut catalog (reads all 5.5 GB)
+├── exp_01_spec.md                        ← exp_01 spec, decisions, open questions
 ├── Data/
 │   └── Pilot data/demo_2026-03-05_1439/
 │       ├── demo_2026-03-05_1439.mat      ← Results table + config
@@ -22,6 +26,8 @@ Video project/
 ├── video_ebm_dataset/                    ← dataset metadata (videos gitignored)
 │   ├── dataset_licensing_citation.md     ← license + required citations
 │   ├── MANIFEST.csv                      ← expected files per subfolder (for verification)
+│   ├── durations.csv                     ← measured duration of all 600 videos
+│   ├── cuts.csv                          ← keyframe + scene-cut catalog (not built yet)
 │   ├── Machado et al. 2011 Video Content.csv
 │   ├── Bliss-Moreau, Machado, & Amaral, 2013 Video Rating.csv
 │   ├── video_all/    (gitignored — 1200 .mp4 files, re-encoded from original .mpg)
@@ -337,10 +343,12 @@ run** above for the full rig checklist.
   `dummymode`-linked default off-rig, not on it) and accept unverified timing;
   try disabling/working around DWM; update GPU driver; or investigate PTB's
   `help SyncTrouble`. Undecided.
-- [ ] **TTL sync pulses added but commented out** (2026-07-29) — `cclabPulse('A')`
-  at movie onset, `cclabPulse('B')` at movie offset (both `MovieOff` sites).
-  Disabled until Brinda confirms line assignment/timing against the Neuropixel
-  setup; do not enable blind.
+- [x] **TTL sync pulses are LIVE** — `cclabPulse('A')` at movie onset,
+  `cclabPulse('B')` at movie offset (both `MovieOff` sites). This item
+  previously said they were commented out; that was stale as of the signaling
+  commit (`1f522d9`). Brinda still needs to confirm line assignment/timing
+  against the Neuropixel setup — exp_01 makes this more urgent, since interleave
+  mode fires ~8 pulse pairs per trial where this task fires 1.
 
 ## Devlog
 
@@ -447,3 +455,12 @@ run** above for the full rig checklist.
   cross-platform compatibility.
 - `paths.cfg` system added for gitignored local NAS mount config.
 - `cclab-matlab-tools` added as git submodule under `Code/`.
+
+## exp_01 — transitions / interleave
+
+A second paradigm lives in `Code/exp01_transitions/` (its own README covers
+usage). Free viewing across video transitions: a trial is a playlist of
+segments, where a segment is a time window of a parent video seeked to in
+place — no videos are split on disk.
+
+Picking this up on a new machine, or handing it off: **`docs/PICKUP.md`**.
