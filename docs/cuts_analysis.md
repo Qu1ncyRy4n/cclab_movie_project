@@ -53,6 +53,35 @@ single gap has a trivially-zero CV):
 | social_directed | 36 | 0.00 |
 | social_undir | 147 | 0.14 |
 
+**The mean hides how different these categories are video-by-video.** Broken
+down by regularity, not averaged:
+
+| category | % of videos with CV < 0.10 (very regular) | % with CV > 0.30 (irregular) | CV range |
+|---|---|---|---|
+| nature | 8% | 49% | 0.02 – 1.08 |
+| social_directed | **100%** | 0% | 0.00 – 0.02 |
+| social_undir | 78% | 22% | 0.00 – 1.00 |
+
+- `social_directed` isn't "regular on average" — it is regular in **every
+  single one** of the 36 videos (max CV = 0.02). That is not a statistical
+  tendency, it is a near-fixed interval across the entire category, which
+  makes the camera-switch-artifact explanation below more plausible, not
+  less — genuine editorial pacing does not come out this clean category-wide.
+- `nature` is genuinely irregular for roughly **half** its videos, not just
+  "less regular on average."
+- `social_undir` is bimodal: most videos are quite regular, but a real
+  minority (22%) are not.
+
+**Caveat: some apparent irregularity is a detection artifact, not real
+double-cuts.** E.g. `aggression06DVD` reports cuts at `0.033, 15.015,
+15.048` — the last two are 33 ms apart, almost certainly one real cut
+triggering the scene-score filter on two consecutive frames rather than two
+distinct transitions. This inflates `n_cuts` and CV for a handful of videos
+(several of the highest-CV "irregular" examples above are this artifact, not
+genuine irregular pacing). Not yet corrected in `cuts.csv` — a de-duplication
+pass (merge cuts within ~200ms) would clean this up if the exact `n_cuts`
+count starts mattering for a decision.
+
 `social_directed` videos with cuts are essentially metronomic. Examples,
 straight from `cuts.csv`:
 
