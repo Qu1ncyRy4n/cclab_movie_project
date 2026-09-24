@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Interleave Options Demo</title>
+<meta name="description" content="Hardcoded timing simulation of the exp_01 interleave redesign options — baseline, options 1/2/4/5, using real cut timestamps from cuts.csv.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --panel: #ffffff;
+    --ink: #1b1f27;
+    --ink-dim: #5b6270;
+    --border: #dde1e8;
+    --accent-a: #3b6fd6;   /* Clip A */
+    --accent-a-dim: #dbe6fb;
+    --accent-b: #d67a3b;   /* Clip B */
+    --accent-b-dim: #fbe7d6;
+    --accent-fix: #8a8f99; /* fixation */
+    --accent-fix-dim: #e4e6ea;
+    --accent-warn: #c0392b;
+    --tab-bg: #e9ebef;
+    --tab-active: #ffffff;
+    --screen-bg: #14161b;
+    --screen-ink: #f4f5f7;
+    --hud-bg: #0d0e11;
+    --hud-ink: #d8dae0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14161b;
+      --panel: #1c1f26;
+      --ink: #eef0f3;
+      --ink-dim: #9aa0ac;
+      --border: #2c3038;
+      --accent-a: #6f9bef;
+      --accent-a-dim: #22304d;
+      --accent-b: #eb9a5e;
+      --accent-b-dim: #4a3320;
+      --accent-fix: #9aa0ac;
+      --accent-fix-dim: #2a2d34;
+      --accent-warn: #e0685a;
+      --tab-bg: #23262d;
+      --tab-active: #1c1f26;
+      --screen-bg: #05060a;
+      --screen-ink: #eef0f3;
+      --hud-bg: #05060a;
+      --hud-ink: #c7cad2;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161b; --panel: #1c1f26; --ink: #eef0f3; --ink-dim: #9aa0ac;
+    --border: #2c3038; --accent-a: #6f9bef; --accent-a-dim: #22304d;
+    --accent-b: #eb9a5e; --accent-b-dim: #4a3320; --accent-fix: #9aa0ac;
+    --accent-fix-dim: #2a2d34; --accent-warn: #e0685a; --tab-bg: #23262d;
+    --tab-active: #1c1f26; --screen-bg: #05060a; --screen-ink: #eef0f3;
+    --hud-bg: #05060a; --hud-ink: #c7cad2;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px; background: var(--bg); color: var(--ink);
+    font: 15px/1.5 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 4px 0 2px; }
+  .sub { color: var(--ink-dim); font-size: 13px; margin-bottom: 16px; }
+  .sub code { background: var(--tab-bg); padding: 1px 5px; border-radius: 4px; }
+
+  .tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
+  .tabs button {
+    flex: 1 1 auto; min-width: 100px; padding: 9px 8px; font-size: 13px;
+    border: 1px solid var(--border); background: var(--tab-bg); color: var(--ink);
+    border-radius: 8px 8px 0 0; cursor: pointer;
+  }
+  .tabs button.active { background: var(--tab-active); font-weight: 600; border-bottom-color: var(--tab-active); }
+
+  .panel {
+    display: none; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 0 8px 8px 8px; padding: 16px;
+  }
+  .panel.active { display: block; }
+
+  .desc { font-size: 13.5px; color: var(--ink-dim); margin: 0 0 14px; }
+  .desc b { color: var(--ink); }
+
+  .controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .controls button {
+    padding: 6px 14px; font-size: 13px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--tab-bg); color: var(--ink); cursor: pointer;
+  }
+  .controls button.primary { background: var(--accent-a); color: #fff; border-color: var(--accent-a); }
+  .controls select { padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--panel); color: var(--ink); }
+  .controls label { font-size: 13px; color: var(--ink-dim); display: flex; align-items: center; gap: 5px; }
+
+  /* the "screen" */
+  .screen {
+    position: relative; height: 150px; border-radius: 10px; background: var(--screen-bg);
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    overflow: hidden; margin-bottom: 10px; transition: background-color .15s;
+  }
+  .screen .big-label { color: var(--screen-ink); font-size: 19px; font-weight: 600; }
+  .screen .big-sub { color: var(--screen-ink); opacity: .75; font-size: 12.5px; margin-top: 4px; }
+  .screen .flash {
+    position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none;
+  }
+
+  /* timeline */
+  .timeline { position: relative; height: 46px; border-radius: 6px; overflow: hidden;
+    border: 1px solid var(--border); display: flex; margin-bottom: 2px; }
+  .seg { height: 100%; display: flex; align-items: center; justify-content: center;
+    font-size: 10.5px; color: var(--ink); border-right: 1px solid var(--panel); position: relative; }
+  .seg.A { background: var(--accent-a-dim); }
+  .seg.B { background: var(--accent-b-dim); }
+  .seg.FIX { background: var(--accent-fix-dim); }
+  .seg.TRUNC { background: repeating-linear-gradient(45deg, var(--accent-warn) 0 6px, transparent 6px 12px); opacity:.5; }
+  .playhead {
+    position: absolute; top: 0; bottom: 0; width: 2px; background: var(--accent-warn);
+    left: 0%; transition: left 0.03s linear;
+  }
+  .tl-scale { display: flex; justify-content: space-between; font-size: 10px; color: var(--ink-dim); margin-bottom: 14px; }
+
+  /* bottom timing dialog — fixed to the bottom of the screen area */
+  .hud {
+    background: var(--hud-bg); color: var(--hud-ink); border-radius: 8px; padding: 10px 14px;
+    font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 18px;
+  }
+  .hud .k { opacity: .6; margin-right: 6px; }
+  .hud .warn { color: var(--accent-warn); font-weight: 600; }
+  @media (max-width: 520px) { .hud { grid-template-columns: 1fr; } }
+
+  .legend { display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--ink-dim); margin: 10px 0 0; }
+  .legend span { display:inline-flex; align-items:center; gap:5px; }
+  .sw { width:10px; height:10px; border-radius:2px; display:inline-block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Interleave redesign — timing demo</h1>
+  <p class="sub">Hardcoded playback simulation, not real video. Companion to
+    <code>docs/interleave_design_options_2026-09-24_0951.md</code> and
+    <code>docs/cuts_analysis.md</code>. Real cut timestamps below are pulled
+    straight from <code>video_ebm_dataset/cuts.csv</code>.</p>
+
+  <div class="tabs" id="tabs"></div>
+  <div id="panels"></div>
+
+  <p class="sub" style="margin-top:18px;">Option 3 ("stay arbitrary") has no
+    tab — it's the Baseline tab, just without the claim that the timing means
+    anything content-wise.</p>
+</div>
+
+<script>
+// ---------------------------------------------------------------------
+// Each tab is fully self-contained: its own segment list + its own render
+// state. Nothing is shared between tabs except the generic player engine.
+// ---------------------------------------------------------------------
+
+const FIX_DUR = 0.5; // t_fix_between default, CONFI_exp01_transitions.m
+
+function buildAlternating(segDurA, segDurB, n, fixOn, labelA, labelB) {
+  // n = total segments (alternating A,B,A,B,...)
+  const segs = [];
+  for (let i = 0; i < n; i++) {
+    const isA = i % 2 === 0;
+    segs.push({
+      clip: isA ? 'A' : 'B',
+      dur: isA ? segDurA : segDurB,
+      label: isA ? labelA.name : labelB.name,
+      sub: isA ? labelA.sub : labelB.sub,
+      idx: Math.floor(i / 2) + 1
+    });
+    if (fixOn && i < n - 1) segs.push({ clip: 'FIX', dur: FIX_DUR, label: 'fixation dot', sub: 're-centers gaze' });
+  }
+  return segs;
+}
+
+const TABS = [
+  {
+    id: 'baseline',
+    title: 'Baseline (today)',
+    desc: 'What CONFI_exp01_transitions.m ships with right now: <b>interleaveSegDur = 2.5s</b>, ' +
+          '<b>interleaveClipTotal = 10s</b> → 8 fixed-length segments per trial, alternating. ' +
+          'Segment boundaries are an arbitrary clock, unrelated to either clip\'s real cuts.',
+    fixToggle: true,
+    build: (fixOn) => buildAlternating(2.5, 2.5, 8, fixOn,
+      { name: 'Clip A', sub: 'social_undir (e.g. aggression01DVD)' },
+      { name: 'Clip B', sub: 'social_directed (e.g. aggr_cam_directed19DVD)' })
+  },
+  {
+    id: 'opt1',
+    title: 'Option 1: tune the knob',
+    desc: 'Same mechanism as Baseline, just a bigger constant: <b>interleaveSegDur = 7s</b>, ' +
+          '<b>interleaveClipTotal = 28s</b>. Zero new logic, still a global guess that won\'t fit ' +
+          'every clip\'s own rhythm.',
+    fixToggle: true,
+    build: (fixOn) => buildAlternating(7, 7, 8, fixOn,
+      { name: 'Clip A', sub: 'social_undir (e.g. aggression01DVD)' },
+      { name: 'Clip B', sub: 'social_directed (e.g. aggr_cam_directed19DVD)' })
+  },
+  {
+    id: 'opt2',
+    title: 'Option 2: pairs + fixation',
+    desc: 'Collapses to whole-clip blocks: one full clip, a fixation break, the other full clip. ' +
+          'Closest to the original pilot task\'s shape. <b>Not rapid A-B-A-B</b> — confirm with the ' +
+          'PI whether block alternation still counts as "interleaved."',
+    fixToggle: true,
+    build: (fixOn) => {
+      const segs = [
+        { clip: 'A', dur: 30.0, label: 'Clip A (full)', sub: 'social_undir — aggression01DVD, 30.0s', idx: 1 },
+      ];
+      if (fixOn) segs.push({ clip: 'FIX', dur: FIX_DUR, label: 'fixation dot', sub: 're-centers gaze' });
+      segs.push({ clip: 'B', dur: 30.0, label: 'Clip B (full)', sub: 'social_directed — aggr_cam_directed19DVD, 30.0s', idx: 1 });
+      if (fixOn) segs.push({ clip: 'FIX', dur: FIX_DUR, label: 'fixation → ITI', sub: 'into reward/ITI' });
+      return segs;
+    }
+  },
+  {
+    id: 'opt4',
+    title: 'Option 4: natural shots',
+    desc: 'Segment length = that clip\'s <b>own</b> real cuts from <code>cuts.csv</code>, not a config ' +
+          'constant. Clip A = <code>aggr_cam_directed19DVD</code> (near-metronomic, ~4.34s shots), ' +
+          'Clip B = <code>aggression01DVD</code> (~6.0s shots). First 3 shots of each shown.',
+    fixToggle: true,
+    build: (fixOn) => {
+      const aShots = [4.338, 4.337, 4.338]; // real cuts.csv gaps, aggr_cam_directed19DVD
+      const bShots = [6.006, 6.006, 6.006]; // real cuts.csv gaps, aggression01DVD
+      const segs = [];
+      for (let i = 0; i < 3; i++) {
+        segs.push({ clip: 'A', dur: aShots[i], label: 'Clip A shot ' + (i + 1),
+          sub: 'social_directed — aggr_cam_directed19DVD', idx: i + 1 });
+        if (fixOn) segs.push({ clip: 'FIX', dur: FIX_DUR, label: 'fixation dot', sub: 're-centers gaze' });
+        segs.push({ clip: 'B', dur: bShots[i], label: 'Clip B shot ' + (i + 1),
+          sub: 'social_undir — aggression01DVD', idx: i + 1 });
+        if (fixOn && i < 2) segs.push({ clip: 'FIX', dur: FIX_DUR, label: 'fixation dot', sub: 're-centers gaze' });
+      }
+      return segs;
+    }
+  },
+  {
+    id: 'opt5',
+    title: 'Option 5: min(A, B) trial length',
+    desc: 'A stopping rule, not a cutting rule — composes with 1/2/4. Trial length = ' +
+          '<b>min(clip A usable, clip B usable)</b> instead of a fixed budget. Here Clip B is one ' +
+          'of the 8 real short <code>nature</code> videos (<code>00364DVD.mp4</code>, 7.0s total) — ' +
+          'the trial is capped at 7.0s and the last segment is truncated, instead of overrunning B.',
+    fixToggle: false,
+    build: () => [
+      { clip: 'A', dur: 2.5, label: 'Clip A', sub: 'social_undir — aggression01DVD (30.0s available)', idx: 1 },
+      { clip: 'B', dur: 2.5, label: 'Clip B', sub: 'nature — 00364DVD.mp4 (only 7.0s total!)', idx: 1 },
+      { clip: 'A', dur: 2.0, label: 'Clip A (truncated)', sub: 'cut short — min(30.0, 7.0) = 7.0s reached', idx: 2, trunc: true },
+    ]
+  },
+];
+
+// ---------------------------------------------------------------------
+// Generic player engine — reads a tab's current segment list, does not
+// know anything about what the options mean.
+// ---------------------------------------------------------------------
+
+const state = {}; // per-tab: { segs, total, playing, t, speed }
+
+function computeState(tab) {
+  const fixOn = tab.fixToggle ? document.getElementById('fix-' + tab.id).checked : false;
+  const segs = tab.build(fixOn);
+  let acc = 0;
+  segs.forEach(s => { s.start = acc; acc += s.dur; });
+  return { segs, total: acc, playing: false, t: 0, speed: 1 };
+}
+
+function renderTimeline(tab) {
+  const st = state[tab.id];
+  const tl = document.getElementById('tl-' + tab.id);
+  tl.querySelectorAll('.seg').forEach(e => e.remove());
+  const playhead = tl.querySelector('.playhead');
+  st.segs.forEach(s => {
+    const el = document.createElement('div');
+    el.className = 'seg ' + s.clip + (s.trunc ? ' TRUNC' : '');
+    el.style.width = (100 * s.dur / st.total) + '%';
+    el.textContent = s.dur >= 1.2 ? s.dur.toFixed(1) + 's' : '';
+    tl.insertBefore(el, playhead);
+  });
+  document.getElementById('scale-' + tab.id).innerHTML =
+    '<span>0.0s</span><span>' + st.total.toFixed(1) + 's total</span>';
+}
+
+function segAt(st, t) {
+  for (const s of st.segs) if (t >= s.start && t < s.start + s.dur) return s;
+  return st.segs[st.segs.length - 1];
+}
+
+function renderFrame(tab) {
+  const st = state[tab.id];
+  const s = segAt(st, Math.min(st.t, st.total - 0.001));
+  const screen = document.getElementById('screen-' + tab.id);
+  const bigLabel = screen.querySelector('.big-label');
+  const bigSub = screen.querySelector('.big-sub');
+  screen.style.background =
+    s.clip === 'A' ? 'color-mix(in srgb, var(--accent-a) 55%, var(--screen-bg))' :
+    s.clip === 'B' ? 'color-mix(in srgb, var(--accent-b) 55%, var(--screen-bg))' :
+    'var(--screen-bg)';
+  bigLabel.textContent = s.clip === 'FIX' ? '+ fixation' : s.label;
+  bigSub.textContent = s.sub || '';
+
+  document.getElementById('tl-' + tab.id).querySelector('.playhead').style.left =
+    (100 * Math.min(st.t, st.total) / st.total) + '%';
+
+  const remaining = Math.max(0, (s.start + s.dur) - st.t);
+  const next = st.segs[st.segs.indexOf(s) + 1];
+  const hud = document.getElementById('hud-' + tab.id);
+  hud.innerHTML =
+    '<div><span class="k">t</span>' + st.t.toFixed(2) + ' / ' + st.total.toFixed(2) + ' s</div>' +
+    '<div><span class="k">segment</span>' + (s.label || '') + (s.idx ? ' (' + s.idx + ')' : '') + '</div>' +
+    '<div><span class="k">category</span>' + (s.sub || '—') + '</div>' +
+    '<div><span class="k">seg. duration</span>' + s.dur.toFixed(2) + ' s</div>' +
+    '<div><span class="k">remaining</span>' + remaining.toFixed(2) + ' s' + (s.trunc && remaining < 0.05 ? ' <span class="warn">(truncated)</span>' : '') + '</div>' +
+    '<div><span class="k">next</span>' + (next ? (next.clip === 'FIX' ? 'fixation' : next.label) : '<span class="warn">end of trial</span>') + '</div>';
+}
+
+let rafId = null;
+let lastTs = null;
+function tick(ts) {
+  if (lastTs == null) lastTs = ts;
+  const dt = (ts - lastTs) / 1000;
+  lastTs = ts;
+  for (const tab of TABS) {
+    const st = state[tab.id];
+    if (st && st.playing) {
+      st.t += dt * st.speed;
+      if (st.t >= st.total) { st.t = st.total; st.playing = false; updatePlayBtn(tab.id); }
+      renderFrame(tab);
+    }
+  }
+  rafId = requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+function updatePlayBtn(id) {
+  document.getElementById('play-' + id).textContent = state[id].playing ? 'Pause' : 'Play';
+}
+
+function rebuild(tab) {
+  const wasPlaying = state[tab.id] && state[tab.id].playing;
+  const speed = state[tab.id] ? state[tab.id].speed : 1;
+  state[tab.id] = computeState(tab);
+  state[tab.id].speed = speed;
+  renderTimeline(tab);
+  renderFrame(tab);
+  if (wasPlaying) { state[tab.id].playing = true; updatePlayBtn(tab.id); }
+}
+
+// ---------------------------------------------------------------------
+// DOM scaffolding
+// ---------------------------------------------------------------------
+
+const tabsEl = document.getElementById('tabs');
+const panelsEl = document.getElementById('panels');
+
+TABS.forEach((tab, i) => {
+  const btn = document.createElement('button');
+  btn.textContent = tab.title;
+  btn.className = i === 0 ? 'active' : '';
+  btn.onclick = () => {
+    document.querySelectorAll('#tabs button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + tab.id).classList.add('active');
+  };
+  tabsEl.appendChild(btn);
+
+  const panel = document.createElement('div');
+  panel.className = 'panel' + (i === 0 ? ' active' : '');
+  panel.id = 'panel-' + tab.id;
+  panel.innerHTML =
+    '<p class="desc">' + tab.desc + '</p>' +
+    '<div class="controls">' +
+      '<button class="primary" id="play-' + tab.id + '">Play</button>' +
+      '<button id="reset-' + tab.id + '">Reset</button>' +
+      '<label>speed <select id="speed-' + tab.id + '">' +
+        '<option value="1">1&times;</option><option value="2">2&times;</option>' +
+        '<option value="4" selected>4&times;</option><option value="8">8&times;</option>' +
+      '</select></label>' +
+      (tab.fixToggle ? '<label><input type="checkbox" id="fix-' + tab.id + '" checked> fixation between segments (t_fix_between)</label>' : '') +
+    '</div>' +
+    '<div class="screen" id="screen-' + tab.id + '"><div><div class="big-label"></div><div class="big-sub"></div></div></div>' +
+    '<div class="timeline" id="tl-' + tab.id + '"><div class="playhead"></div></div>' +
+    '<div class="tl-scale" id="scale-' + tab.id + '"></div>' +
+    '<div class="hud" id="hud-' + tab.id + '"></div>' +
+    '<div class="legend">' +
+      '<span><i class="sw" style="background:var(--accent-a)"></i>Clip A</span>' +
+      '<span><i class="sw" style="background:var(--accent-b)"></i>Clip B</span>' +
+      '<span><i class="sw" style="background:var(--accent-fix)"></i>fixation</span>' +
+      (tab.id === 'opt5' ? '<span><i class="sw" style="background:var(--accent-warn);opacity:.6"></i>truncated (budget exhausted)</span>' : '') +
+    '</div>';
+  panelsEl.appendChild(panel);
+});
+
+TABS.forEach(tab => {
+  rebuild(tab);
+  document.getElementById('play-' + tab.id).onclick = () => {
+    const st = state[tab.id];
+    if (st.t >= st.total) st.t = 0;
+    st.playing = !st.playing;
+    updatePlayBtn(tab.id);
+  };
+  document.getElementById('reset-' + tab.id).onclick = () => {
+    const st = state[tab.id];
+    st.t = 0; st.playing = false;
+    updatePlayBtn(tab.id);
+    renderFrame(tab);
+  };
+  document.getElementById('speed-' + tab.id).onchange = (e) => {
+    state[tab.id].speed = parseFloat(e.target.value);
+  };
+  if (tab.fixToggle) {
+    document.getElementById('fix-' + tab.id).onchange = () => rebuild(tab);
+  }
+});
+</script>
+</body>
+</html>
