@@ -298,8 +298,10 @@ run** above for the full rig checklist.
 - [ ] **Move encoded videos to NAS** — re-encoding .mpg → .mp4 in progress (see
   `encode_mp4.sh`). Once complete, copy `video_all_mp4/` contents to NAS
   `video_all/` and set `computer_name = 'lab_120'` in CONFI.
-- [ ] **Windows shortcut to repo** — create a `.lnk` on the lab Desktop pointing to
-  the repo root so it's easy to find on the Windows machine.
+- [x] **Windows shortcut to repo — pattern exists, not yet run on a lab
+  machine** (2026-09-24). `Code/exp00_pilot_interleave/create_desktop_shortcut.ps1`
+  creates a `.lnk` via `WScript.Shell` pointing at its own folder; retarget
+  `$targetPath` at the repo root to shortcut the whole project instead.
 - [ ] **Boundary video support** — not wired up. Add `video_boundary` column to
   MANIFEST, extend `pseudorandomization.m` with a 4th category and group size.
 - [x] **`MANIFEST.csv` embedded `\r` — fixed** (2026-07-29). Confirmed as the

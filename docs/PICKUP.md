@@ -5,6 +5,37 @@ person) can continue without the conversation that produced it.
 
 ---
 
+## 2026-09-24 — pivot: exp_00, a deliberately tiny pilot, built alongside exp_01
+
+Everything below this point is still accurate for `exp_01_transitions` and
+still the deeper design work — see `exp_01_spec.md` and
+`docs/interleave_design_options_2026-09-24_0951.md` (design-space matrix +
+interactive demo at `docs/demos/interleave_options_demo.html`) for that.
+But real data collection is starting from something much smaller first:
+
+- **`Code/exp00_pilot_interleave/`** (MATLAB) — 4 hand-vetted videos (2
+  `nature`, 2 `social_undir`, from `MANIFEST.csv`'s `pilot_ready` column),
+  no de Bruijn balancing, no `buildSequence.m`, fixation once per trial
+  then a fixed interleave, unconditional reward. Own README covers the
+  design and why it's this simple.
+- **`psychopy_pilot/`** (Python) — the same design, built in parallel as a
+  stack comparison. Template only — not run against a real PsychoPy
+  install, no EyeLink/reward-hardware integration yet. Own README covers
+  gaps.
+- **`video_ebm_dataset/pilot_pool.csv`** — the shared 4-video pool both
+  stacks read from.
+- Rationale: too many open design questions (segment length, matching
+  criterion, familiarity/repetition, PI's exact "interleaved" requirement)
+  to settle any of them without first seeing real behavior. This pilot logs
+  `TimesShownBeforeA/B` for future familiarity analysis but doesn't control
+  for it yet.
+- **Next**: test `exp_00` from a Windows machine in dummy mode (mouse, no
+  EyeLink) — see `Code/exp00_pilot_interleave/README.md`'s Windows section
+  for the `computer_name = 'win_dummy'` config case and the `.ps1`/`.bat`
+  launcher scripts.
+
+---
+
 ## Where things stand
 
 `Code/exp01_transitions/` is a complete, runnable experiment: playlist-driven
