@@ -70,11 +70,22 @@ over the VPN is ~430 KB/s → about **3.6 hours**. On the lab LAN it is roughly
 # verify the tooling first — builds its own test video, touches no data
 bash catalog_cuts.sh --selftest        # expect: selftest cuts: [2.000] ... selftest OK
 
-VID=/mnt/c/cclab_data/video_ebm_dataset/video_all   # or the NAS path
-ls "$VID"/*.mp4 | wc -l                             # expect 600
+VID=/mnt/cclab/shared/Bliss-Moreau_Machado_Videos/video_ebm_dataset/video_all
+ls "$VID"/*.mp4 | wc -l                # expect 600
 
 bash catalog_cuts.sh "$VID"
 ```
+
+The videos directory is a **positional argument to the script** — nothing to do
+with `CONFI_exp01_transitions.m`, which only matters to MATLAB. Written out in
+full, that last line is:
+
+```bash
+bash catalog_cuts.sh /mnt/cclab/shared/Bliss-Moreau_Machado_Videos/video_ebm_dataset/video_all
+```
+
+`cuts.csv` is written inside the repo regardless of where the videos live, so
+the repo has to be cloned on whatever machine runs this.
 
 Resumable — `cuts.csv` is its own progress ledger, so a dropped mount costs one
 file, not the run. For a long run: `nohup bash catalog_cuts.sh "$VID" > catalog.log 2>&1 &`
@@ -111,14 +122,57 @@ done
 
 ## Getting a machine ready
 
+The shell scripts here need `bash`, `ffmpeg` and `ffprobe`. **`ffprobe` ships
+with `ffmpeg`** — one package gives you both, so there is nothing separate to
+install. (`ffplay` is the one that is sometimes absent; nothing here uses it.)
+
 ```bash
+sudo apt update && sudo apt install -y ffmpeg     # WSL / Ubuntu
+ffprobe -version | head -1                        # confirm
+
 git clone --recurse-submodules git@github.com:Qu1ncyRy4n/cclab_movie_project.git
 cd cclab_movie_project
 git submodule update --init          # cclab-matlab-tools; easy to forget
-ffmpeg -version | head -1            # WSL/Ubuntu: sudo apt install -y ffmpeg
+                                     # no SSH key on this machine? clone from
+                                     # https://github.com/Qu1ncyRy4n/cclab_movie_project.git
+
 bash probe_durations.sh --selftest
 bash catalog_cuts.sh   --selftest
 ```
+
+If a self-test fails, stop: that is an ffmpeg build problem, not a data
+problem, and running against the real dataset will not tell you anything.
+
+### Mounting the NAS from WSL
+
+```bash
+sudo mkdir -p /mnt/cclab
+sudo mount -t drvfs '\\cns-nas.ucdavis.edu\cclab' /mnt/cclab
+ls /mnt/cclab/shared/Bliss-Moreau_Machado_Videos/video_ebm_dataset/video_all | head
+```
+
+The mount does not survive a reboot. Re-run it, or add it to `/etc/fstab`.
+
+### Rebuilding WSL from scratch
+
+Only worth doing if the existing install is actually broken — for the catalog
+job the requirement is just bash + ffmpeg + a NAS mount. From an admin
+PowerShell:
+
+```powershell
+wsl --list --verbose             # what is installed now
+wsl --unregister Ubuntu          # DESTROYS that distro's filesystem — export anything you want first
+wsl --install -d Ubuntu
+```
+
+Then re-run the block at the top of this section. Nothing in this repo lives
+inside WSL's filesystem, so a rebuild costs you the clone and the apt install,
+nothing more.
+
+**Or skip WSL entirely.** Nothing about the catalog job requires it — a Windows
+ffmpeg build (`winget install Gyan.FFmpeg`) plus a PowerShell port of
+`catalog_cuts.sh` would do the same work. The script is two ffmpeg invocations
+in a loop. Ask if you want that version written.
 
 In MATLAB:
 
@@ -133,9 +187,18 @@ The videos are **not** in the repo and never will be (5.5 GB, gitignored). They
 live on the NAS at
 `\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset\video_all\`.
 
+**You may not need a local copy.** Two different needs:
+- *the catalog job* — no copy required. On the lab LAN, point `catalog_cuts.sh`
+  straight at the NAS path and skip the 5.5 GB transfer entirely.
+- *running the experiment* — yes, copy. A NAS hiccup mid-playback drops frames.
+
 Convention for a local copy is **`C:\cclab_data\video_ebm_dataset\`** — off the
 Desktop so OneDrive never tries to sync 5.5 GB, outside the repo, and laid out
 exactly like the NAS share so nothing else has to change.
+
+**On Windows (including a Remote Desktop session), use `robocopy`** — it is
+native, resumable, and rsync writing to `/mnt/c` through WSL's drvfs layer is
+slow enough to matter across 5.5 GB.
 
 ```powershell
 # Windows, resumable, skips files already copied
@@ -143,8 +206,10 @@ robocopy "\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_e
          "C:\cclab_data\video_ebm_dataset\video_all" /E /Z /XO /R:3 /W:5
 ```
 
+Only if you are working from a Linux/macOS shell and the destination is a real
+Linux filesystem (not `/mnt/c`):
+
 ```bash
-# WSL / Linux / macOS equivalent
 rsync -avP --partial \
   /mnt/cclab/shared/Bliss-Moreau_Machado_Videos/video_ebm_dataset/video_all/ \
   /mnt/c/cclab_data/video_ebm_dataset/video_all/
