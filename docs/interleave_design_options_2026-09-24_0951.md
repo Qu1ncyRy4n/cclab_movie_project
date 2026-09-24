@@ -241,3 +241,61 @@ to run this week; 4 if there's time to do it properly. 3 is the no-op
 fallback if 4 turns out not to be worth it. 5 is close to free and worth
 doing regardless of which segmentation option ships, since it also closes a
 real edge-case bug against the 8 short `nature` videos.
+
+---
+
+## Design-space generalization
+
+**2026-09-24 (later).** Options 1–5 above, plus the five shot-pool
+"presentation schemes" (P1–P5, built only in
+`docs/demos/interleave_options_demo.html`'s later tabs — not written up as
+prose here to avoid duplicating the demo), all turn out to be points on a
+2-axis grid, not an unrelated list.
+
+**Rows — unit type** (how the video gets cut):
+- **Full video** — uncut, whole ~30s parent played straight through.
+- **Arbitrary slice** — precut to a fixed duration by a config constant,
+  ignores real content boundaries.
+- **Natural shot** — precut at the video's own real scene-cut boundaries
+  (`cuts.csv`).
+
+**Columns — arrangement** (how units from different categories sit in time):
+- **Separate** — one unit per trial, category order pseudo-randomized
+  *across* trials, not within one.
+- **Blocked run** — several same-category units back to back within a
+  trial, then switch category.
+- **Interleaved, fixed pair** — 2 specific clips alternate for the whole
+  trial (today's `buildInterleave()`).
+- **Interleaved, free pool** — each segment drawn independently from the
+  category pool; not locked to 2 parents.
+
+| | Separate | Blocked run | Interleaved, fixed pair | Interleaved, free pool |
+|---|---|---|---|---|
+| **Full video** | = the *original pilot task* (`RUN_freeviewingTraining_movie.m`) — already built, already piloted, not part of `exp_01` | not meaningful — just consecutive trials in the original design | **structurally impossible** — can't rapid-alternate without cutting the video | **structurally impossible**, same reason |
+| **Arbitrary slice** | not built, low value — a random-length slice with no principled start/end, and no partner to justify calling it "interleaved" | not built — easy extension of P4 with fixed-length slices | **= Baseline / Option 1** | not built — easy extension of Baseline/Option 1, drawing from the pool instead of 2 fixed clips |
+| **Natural shot** | **= P2** — ⚠️ content-identical to Full-video×Separate; reassembling one clip's own shots in their original order doesn't change what's shown, only that it's now addressable as named units. Real content differences only appear once you reorder, interleave, or mix parents. | **= P4** | **= Option 4** | **= P1** (free alternation), **P3** (duration-matched), **P5** (3-way chain) |
+
+Two more things vary independently of both axes — they're modifiers on a
+cell, not cells of their own:
+- **Trial-length rule**: fixed constant vs. Option 5's `min(clip A usable,
+  clip B usable)`. Applies to any cell with more than one unit per trial.
+- **Matching criterion** (interleaved cells only): none / duration-matched
+  (P3) / cut-count-matched (the original idea from this discussion —
+  dropped, see the population-mismatch note in `docs/cuts_analysis.md`:
+  only 4 `nature` videos exist at a 6-cut count vs. 23 `social_undir`).
+
+**What the grid makes obvious that the flat option list didn't:**
+- "PI wants interleaved" already rules out the entire **Full video** row —
+  both interleaved cells there are not just unbuilt, they're impossible.
+  The original pilot task (Full video × Separate) is a different thing
+  entirely, not a fallback interleave option.
+- **Natural shot** is the only row with a real, meaningful answer in every
+  column — the strongest structural argument yet for it over arbitrary
+  slicing, independent of the earlier rhythm/regularity findings.
+- **P2 isn't really a new design** — it's a control condition proving that
+  splitting a video into shots, by itself, is a no-op unless something is
+  also done with the reordering.
+- The three unbuilt **Arbitrary slice** cells are trivial to fill if ever
+  wanted, but there's no reason to prefer them over the equivalent
+  **Natural shot** cell in the same column — they're strictly worse by the
+  same logic that motivated this whole redesign.
