@@ -15,6 +15,51 @@ sequence balances category order.
 
 ---
 
+## Cut stats, at a glance
+
+Full numbers, method, and caveats: `docs/cuts_analysis.md`. Condensed here so
+the options below don't need a second tab open.
+
+| category | n | % zero-cut | mean cuts/video | median gap (s) | gap CV (pooled) | within-video gap CV (≥3 cuts) |
+|---|---|---|---|---|---|---|
+| nature | 300 | 25.3% | 1.74 | 7.86 | 0.78 | 0.36 |
+| social_directed | 60 | 10.0% | 3.00 | 6.01 | 0.59 | **0.00** (near-metronomic) |
+| social_undir | 240 | 10.0% | 3.12 | 6.01 | 0.68 | 0.14 |
+
+CV = std/mean of inter-cut gaps. Low = evenly spaced, high = irregular.
+"Pooled" is across all videos in the category; "within-video" restricts to
+gaps inside one video (≥3 cuts, so there's something to compare).
+
+Cut-count histogram, all 600 videos (`#` = 10 videos, rounded):
+
+```
+0 cuts  [106] ##########
+1 cut   [109] ###########
+2 cuts  [117] ############
+3 cuts  [105] ##########
+4 cuts  [ 75] ########
+5 cuts  [ 46] #####
+6 cuts  [ 33] ###
+7 cuts  [  7]
+8 cuts  [  1]
+9 cuts  [  1]
+```
+
+Headline takeaways that motivate the options below:
+- **`social_directed` is not continuous** (only 10% zero-cut, same as
+  `social_undir`) — the n=1 belief that motivated the original design was
+  wrong.
+- **Median gap is 6.01s in both social categories**, but only ~19–25% of
+  individual gaps actually fall near 6s — it's a central tendency, not a
+  typical single gap (std ≈ 4.5–5s).
+- **`social_directed` gaps are near-metronomic within a video** when cuts
+  occur (mean within-video CV ≈ 0.00) — possibly a multi-camera switch
+  artifact rather than a content cut.
+- **`nature` is the outlier**: fewer cuts, longer and less regular gaps than
+  either social category.
+
+---
+
 ## Baseline — what's running today
 
 ```
