@@ -10,7 +10,7 @@ function cclab = CONFI_exp00_pilot()
 % if you add a rig.
 
 %% Machine / rig identity
-cclab.computer_name = 'dev_wsl';
+cclab.computer_name = 'win_dummy';
 
 % Where the videos are read from — same semantics as exp01, see its CONFI
 % for the tradeoffs. Only 4 files needed here, so 'nas' is fine even over
@@ -37,6 +37,19 @@ switch cclab.computer_name
         cclab.filepath_nas   = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset';
         cclab.filepath_local = 'C:\cclab_data\video_ebm_dataset';
         cclab.matlab_path = 'Q:\home\qix\dev\cclab_movie_project\Code';
+        cclab.ScreenNumber = 0;
+        cclab.screenSize   = [1080 720];
+    case 'win_dummy'
+        % Any Windows machine, mouse-as-gaze testing — no rig-specific path
+        % editing needed. matlab_path is derived from this file's own
+        % location, not hardcoded, so it works regardless of where the repo
+        % was cloned. If the NAS UNC path isn't reachable (off the CNS
+        % network/VPN), switch cclab.video_source to 'local' above and set
+        % filepath_local to a real local copy.
+        cclab.dummymode  = 1;
+        cclab.filepath_nas   = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset';
+        cclab.filepath_local = 'C:\cclab_data\video_ebm_dataset';
+        cclab.matlab_path = fileparts(fileparts(mfilename('fullpath'))); % .../cclab_movie_project/Code
         cclab.ScreenNumber = 0;
         cclab.screenSize   = [1080 720];
     otherwise

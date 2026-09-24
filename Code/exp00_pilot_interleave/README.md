@@ -69,6 +69,28 @@ Same `computer_name` / `dummymode` / `video_source` machinery as exp_01 —
 see `CONFI_exp00_pilot.m`. Needs `video_ebm_dataset/pilot_pool.csv` (repo
 root) and the 4 videos present under `video_all/`.
 
+### From Windows PowerShell, dummy mode
+
+`computer_name` defaults to `'win_dummy'` — a case added for exactly this:
+mouse-as-gaze testing on any Windows machine, no path editing needed
+(`matlab_path` is derived from the script's own location, not hardcoded).
+If the NAS UNC path isn't reachable off the CNS network/VPN, switch
+`cclab.video_source` to `'local'` in `CONFI_exp00_pilot.m` and point
+`filepath_local` at a real local copy instead.
+
+```powershell
+cd Code\exp00_pilot_interleave
+.\run_exp00_pilot.ps1          # finds matlab.exe on PATH and launches it;
+                                # prints manual instructions if not found
+```
+
+If PowerShell blocks the script (unsigned-script policy), double-click
+`run_exp00_pilot.bat` instead — it bypasses the policy for just that one
+run, not system-wide.
+
+`.\create_desktop_shortcut.ps1` drops a shortcut to this folder on the
+Desktop, so it doesn't need re-navigating each session.
+
 ## Companion
 
 A PsychoPy version of the same design lives at
