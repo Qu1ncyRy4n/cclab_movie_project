@@ -74,9 +74,20 @@ root) and the 4 videos present under `video_all/`.
 `computer_name` defaults to `'win_dummy'` — a case added for exactly this:
 mouse-as-gaze testing on any Windows machine, no path editing needed
 (`matlab_path` is derived from the script's own location, not hardcoded).
-If the NAS UNC path isn't reachable off the CNS network/VPN, switch
-`cclab.video_source` to `'local'` in `CONFI_exp00_pilot.m` and point
-`filepath_local` at a real local copy instead.
+`video_source` defaults to `'local'`, pointed at a confirmed-present local
+copy (`C:\Users\qmryan\Desktop\Bliss-Moreau_Machado_Videos\video_ebm_dataset`,
+all 4 pool videos verified present there 2026-09-24) — no NAS/VPN
+dependency. Repoint `filepath_local` in `CONFI_exp00_pilot.m` if running
+as someone else, or switch `video_source` back to `'nas'`.
+
+**Where to find things from PowerShell**, if this repo is only cloned
+inside WSL (as it is on this dev machine) rather than natively on Windows:
+`matlab.exe` is already on `PATH` (`C:\Program Files\MATLAB\R20XXx\bin`),
+and the repo itself is reachable at
+`\\wsl.localhost\<distro>\home\<user>\...\cclab_movie_project` — check
+your distro name with `$env:WSL_DISTRO_NAME` if unsure (it's `NixOS` on
+this dev machine). Running MATLAB against files over that bridge works;
+just don't expect NTFS-native speed for anything I/O-heavy.
 
 ```powershell
 cd Code\exp00_pilot_interleave

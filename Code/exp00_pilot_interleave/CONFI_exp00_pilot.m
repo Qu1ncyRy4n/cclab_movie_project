@@ -13,9 +13,9 @@ function cclab = CONFI_exp00_pilot()
 cclab.computer_name = 'win_dummy';
 
 % Where the videos are read from — same semantics as exp01, see its CONFI
-% for the tradeoffs. Only 4 files needed here, so 'nas' is fine even over
-% the VPN (nothing like the 5.5 GB full-dataset case).
-cclab.video_source = 'nas';
+% for the tradeoffs. 'local' is the default here since the win_dummy case
+% below points at a confirmed-present local copy, no NAS/VPN dependency.
+cclab.video_source = 'local';
 
 switch cclab.computer_name
     case {'lab_120', 'lab_121'}
@@ -43,12 +43,12 @@ switch cclab.computer_name
         % Any Windows machine, mouse-as-gaze testing — no rig-specific path
         % editing needed. matlab_path is derived from this file's own
         % location, not hardcoded, so it works regardless of where the repo
-        % was cloned. If the NAS UNC path isn't reachable (off the CNS
-        % network/VPN), switch cclab.video_source to 'local' above and set
-        % filepath_local to a real local copy.
+        % was cloned (including reached via \\wsl.localhost\... from native
+        % Windows). filepath_local below is qmryan's confirmed-present local
+        % copy as of 2026-09-24 — repoint it if running as someone else.
         cclab.dummymode  = 1;
         cclab.filepath_nas   = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset';
-        cclab.filepath_local = 'C:\cclab_data\video_ebm_dataset';
+        cclab.filepath_local = 'C:\Users\qmryan\Desktop\Bliss-Moreau_Machado_Videos\video_ebm_dataset';
         cclab.matlab_path = fileparts(fileparts(mfilename('fullpath'))); % .../cclab_movie_project/Code
         cclab.ScreenNumber = 0;
         cclab.screenSize   = [1080 720];
