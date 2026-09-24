@@ -16,6 +16,8 @@
     --accent-a-dim: #dbe6fb;
     --accent-b: #d67a3b;   /* Clip B */
     --accent-b-dim: #fbe7d6;
+    --accent-n: #2f9e6f;   /* nature, for 3-category presentation schemes */
+    --accent-n-dim: #d7f0e4;
     --accent-fix: #8a8f99; /* fixation */
     --accent-fix-dim: #e4e6ea;
     --accent-warn: #c0392b;
@@ -37,6 +39,8 @@
       --accent-a-dim: #22304d;
       --accent-b: #eb9a5e;
       --accent-b-dim: #4a3320;
+      --accent-n: #4fc490;
+      --accent-n-dim: #1d3a2c;
       --accent-fix: #9aa0ac;
       --accent-fix-dim: #2a2d34;
       --accent-warn: #e0685a;
@@ -51,7 +55,8 @@
   :root[data-theme="dark"] {
     --bg: #14161b; --panel: #1c1f26; --ink: #eef0f3; --ink-dim: #9aa0ac;
     --border: #2c3038; --accent-a: #6f9bef; --accent-a-dim: #22304d;
-    --accent-b: #eb9a5e; --accent-b-dim: #4a3320; --accent-fix: #9aa0ac;
+    --accent-b: #eb9a5e; --accent-b-dim: #4a3320; --accent-n: #4fc490;
+    --accent-n-dim: #1d3a2c; --accent-fix: #9aa0ac;
     --accent-fix-dim: #2a2d34; --accent-warn: #e0685a; --tab-bg: #23262d;
     --tab-active: #1c1f26; --screen-bg: #05060a; --screen-ink: #eef0f3;
     --hud-bg: #05060a; --hud-ink: #c7cad2;
@@ -111,6 +116,7 @@
     font-size: 10.5px; color: var(--ink); border-right: 1px solid var(--panel); position: relative; }
   .seg.A { background: var(--accent-a-dim); }
   .seg.B { background: var(--accent-b-dim); }
+  .seg.N { background: var(--accent-n-dim); }
   .seg.FIX { background: var(--accent-fix-dim); }
   .seg.TRUNC { background: repeating-linear-gradient(45deg, var(--accent-warn) 0 6px, transparent 6px 12px); opacity:.5; }
   .playhead {
@@ -251,6 +257,89 @@ const TABS = [
       { clip: 'A', dur: 2.0, label: 'Clip A (truncated)', sub: 'cut short — min(30.0, 7.0) = 7.0s reached', idx: 2, trunc: true },
     ]
   },
+  // -- Presentation schemes for a pre-split shot pool (undir_10a/b/c idea) --
+  // These assume shots already exist as named, addressable units (Scheme 4
+  // from the naming-schemes tab) and ask a different question: given that
+  // pool, how do you actually assemble a trial from it?
+  {
+    id: 'p1',
+    title: 'P1: cross-parent alternation',
+    desc: 'A/B alternation drawn from the whole category <b>shot pool</b>, not locked ' +
+          'to 2 specific parent clips for the trial — each segment can come from a ' +
+          'different source video. Watch the sub-label: the parent changes between A1 and A2.',
+    fixToggle: false, legendA: 'social_undir', legendB: 'social_directed',
+    build: () => [
+      { clip: 'A', dur: 6.006, label: 'undir shot', sub: 'aggression01DVD_s01', idx: 1 },
+      { clip: 'B', dur: 4.338, label: 'directed shot', sub: 'aggr_cam_directed19DVD_s01', idx: 1 },
+      { clip: 'A', dur: 15.015, label: 'undir shot', sub: 'aggression10DVD_s01 — different parent than A1!', idx: 2 },
+      { clip: 'B', dur: 4.337, label: 'directed shot', sub: 'aggr_cam_directed19DVD_s02', idx: 2 },
+      { clip: 'A', dur: 6.006, label: 'undir shot', sub: 'aggression01DVD_s02 — back to the first parent', idx: 3 },
+    ]
+  },
+  {
+    id: 'p2',
+    title: 'P2: in-order reassembly (control)',
+    desc: 'Not interleaved at all — one parent video\'s own shots, played back to back in ' +
+          'their <b>original</b> order. Useful as a control condition: same shot-level ' +
+          'granularity as the other schemes, zero artificial reordering.',
+    fixToggle: false, legendA: 'nature (single clip)', legendB: null,
+    build: () => [
+      { clip: 'A', dur: 4.137, label: '00189DVD_a', sub: 'nature — shot 1 of 4, original order', idx: 1 },
+      { clip: 'A', dur: 14.115, label: '00189DVD_b', sub: 'nature — shot 2 of 4, original order', idx: 2 },
+      { clip: 'A', dur: 5.372, label: '00189DVD_c', sub: 'nature — shot 3 of 4, original order', idx: 3 },
+      { clip: 'A', dur: 6.473, label: '00189DVD_d', sub: 'nature — shot 4 of 4, original order', idx: 4 },
+    ]
+  },
+  {
+    id: 'p3',
+    title: 'P3: duration-matched triple',
+    desc: 'Your original cut-count-matching idea, fixed at the shot level: instead of matching ' +
+          'whole VIDEOS by cut <b>count</b> (population-mismatched — 4 nature videos at n=6 vs. ' +
+          '23 undirected), match individual <b>shots by real duration</b>. All three segments below ' +
+          'are within ~0.6s of each other, pulled straight from cuts.csv.',
+    fixToggle: false, legendA: 'social_undir', legendB: 'social_directed', legendN: 'nature',
+    build: () => [
+      { clip: 'A', dur: 6.006, label: 'undir', sub: 'aggression01DVD_s01 — 6.01s', idx: 1 },
+      { clip: 'B', dur: 6.006, label: 'directed', sub: 'aggr_cam_directed13DVD_s01 — 6.01s (exact match)', idx: 1 },
+      { clip: 'N', dur: 6.473, label: 'nature', sub: '00189DVD_d — 6.47s (Δ0.47s)', idx: 1 },
+      { clip: 'A', dur: 6.006, label: 'undir', sub: 'aggression01DVD_s02 — 6.01s', idx: 2 },
+      { clip: 'B', dur: 6.006, label: 'directed', sub: 'aggr_cam_directed13DVD_s02 — 6.01s (exact match)', idx: 2 },
+      { clip: 'N', dur: 5.372, label: 'nature', sub: '00189DVD_c — 5.37s (Δ0.63s)', idx: 2 },
+    ]
+  },
+  {
+    id: 'p4',
+    title: 'P4: blocked (no alternation)',
+    desc: 'The opposite of interleaving: several shots from the <b>same</b> category run ' +
+          'consecutively before switching — UUU then DDD, not U-D-U-D. Tests block-level/context ' +
+          'adaptation instead of a per-cut transition response. A different question, not a ' +
+          'replacement for the alternating schemes.',
+    fixToggle: false, legendA: 'social_undir (block)', legendB: 'social_directed (block)',
+    build: () => [
+      { clip: 'A', dur: 6.006, label: 'undir', sub: 'aggression01DVD_s01', idx: 1 },
+      { clip: 'A', dur: 6.006, label: 'undir', sub: 'aggression01DVD_s02', idx: 2 },
+      { clip: 'A', dur: 6.006, label: 'undir', sub: 'aggression01DVD_s03', idx: 3 },
+      { clip: 'B', dur: 4.338, label: 'directed', sub: 'aggr_cam_directed19DVD_s01', idx: 1 },
+      { clip: 'B', dur: 4.337, label: 'directed', sub: 'aggr_cam_directed19DVD_s02', idx: 2 },
+      { clip: 'B', dur: 4.338, label: 'directed', sub: 'aggr_cam_directed19DVD_s03', idx: 3 },
+    ]
+  },
+  {
+    id: 'p5',
+    title: 'P5: long 3-way chain',
+    desc: 'Your <code>Uc, Da, Ud, Db, Ue, Dc, Na...</code> idea — now straightforward, because ' +
+          'each unit is a pre-registered shot with its own real duration instead of something ' +
+          'computed on the fly. Rotates all three categories, drawing different parents each time.',
+    fixToggle: false, legendA: 'social_undir', legendB: 'social_directed', legendN: 'nature',
+    build: () => [
+      { clip: 'A', dur: 6.006, label: 'undir', sub: 'aggression01DVD_s01', idx: 1 },
+      { clip: 'B', dur: 4.338, label: 'directed', sub: 'aggr_cam_directed19DVD_s01', idx: 1 },
+      { clip: 'N', dur: 4.137, label: 'nature', sub: '00189DVD_a', idx: 1 },
+      { clip: 'A', dur: 15.015, label: 'undir', sub: 'aggression10DVD_s01 — new parent', idx: 2 },
+      { clip: 'B', dur: 4.337, label: 'directed', sub: 'aggr_cam_directed19DVD_s02', idx: 2 },
+      { clip: 'N', dur: 14.115, label: 'nature', sub: '00189DVD_b', idx: 2 },
+    ]
+  },
 ];
 
 // ---------------------------------------------------------------------
@@ -298,6 +387,7 @@ function renderFrame(tab) {
   screen.style.background =
     s.clip === 'A' ? 'color-mix(in srgb, var(--accent-a) 55%, var(--screen-bg))' :
     s.clip === 'B' ? 'color-mix(in srgb, var(--accent-b) 55%, var(--screen-bg))' :
+    s.clip === 'N' ? 'color-mix(in srgb, var(--accent-n) 55%, var(--screen-bg))' :
     'var(--screen-bg)';
   bigLabel.textContent = s.clip === 'FIX' ? '+ fixation' : s.label;
   bigSub.textContent = s.sub || '';
@@ -387,8 +477,9 @@ TABS.forEach((tab, i) => {
     '<div class="tl-scale" id="scale-' + tab.id + '"></div>' +
     '<div class="hud" id="hud-' + tab.id + '"></div>' +
     '<div class="legend">' +
-      '<span><i class="sw" style="background:var(--accent-a)"></i>Clip A</span>' +
-      '<span><i class="sw" style="background:var(--accent-b)"></i>Clip B</span>' +
+      '<span><i class="sw" style="background:var(--accent-a)"></i>' + (tab.legendA || 'Clip A') + '</span>' +
+      (tab.legendB !== null ? '<span><i class="sw" style="background:var(--accent-b)"></i>' + (tab.legendB || 'Clip B') + '</span>' : '') +
+      (tab.legendN ? '<span><i class="sw" style="background:var(--accent-n)"></i>' + tab.legendN + '</span>' : '') +
       '<span><i class="sw" style="background:var(--accent-fix)"></i>fixation</span>' +
       (tab.id === 'opt5' ? '<span><i class="sw" style="background:var(--accent-warn);opacity:.6"></i>truncated (budget exhausted)</span>' : '') +
     '</div>';
