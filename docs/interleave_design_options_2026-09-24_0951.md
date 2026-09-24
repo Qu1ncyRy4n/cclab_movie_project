@@ -185,6 +185,47 @@ to have equal cut counts.
 
 ---
 
+## Option 5 — trial length = min(clip A usable, clip B usable)
+
+Not a segmentation rule like 1/2/4 — this is a **stopping rule**, and
+composes with any of them. Instead of a fixed `interleaveClipTotal` (or
+letting Option 4 truncate to an arbitrary shot count), cap the whole trial
+at whichever of the two drawn clips runs out of usable material first, and
+stop there rather than looping or overrunning.
+
+```
+  Trial draws: clip A (aggression01DVD, full 30.0s available from its
+  random start offset) paired with clip B (00364DVD, a short nature video —
+  only 7.0s long total, per durations.csv).
+
+  trial length = min(30.0, 7.0) = 7.0s
+
+  0                                    7.0s   (s)
+  |--A1--|--B1--|--A2--|-- stop, B exhausted --
+  (segment cutting rule — fixed segDur, or per-clip natural shots — is
+   whatever Option 1/2/4 you're already using; this only decides WHEN to
+   stop instead of hitting a config constant or an arbitrary shot cap.)
+```
+
+**Compatibility:** small, targeted change — `drawClip()` in `buildSequence.m`
+already computes `maxStart = durationS - needS` per clip; this just means
+comparing the two drawn clips' *actual remaining runway*
+(`durationS - startS`) and using the smaller one as the trial's segment
+budget, instead of assuming both clips have `interleaveClipTotal` seconds to
+spare.
+**How much this matters in practice:** limited, given the dataset — 592/600
+videos are ~30.0s already (`durations.csv`), so for most drawn pairs
+`min(A, B) ≈ 30s` regardless, same as today. It only bites for the 8 short
+files (7.0s–29.5s, all `nature`, e.g. `00364DVD.mp4` at 7.0s) — but for
+those it fixes a real bug-in-waiting: without this, a fixed
+`interleaveClipTotal` longer than a short clip's remaining material would
+either error out or (worse) silently request time past the video's end.
+**Recommendation:** cheap and low-risk enough to adopt regardless of which
+of 1/2/4 gets picked for the segmentation question — it's a correctness fix
+for the short-nature-video edge case more than a design tradeoff.
+
+---
+
 ## Summary table
 
 | option | new code | matches real footage | still "interleaved" per PI? |
@@ -193,7 +234,10 @@ to have equal cut counts.
 | 2. pairs + fixation | small (reuse `transitions` path) | n/a — no sub-clip alternation | questionable — confirm with PI |
 | 3. stay arbitrary | none | no, explicitly punts on this | yes |
 | 4. per-clip natural shots | moderate (`buildSequence.m` change) | yes, by construction | yes |
+| 5. min(clip A, clip B) trial length | small, targeted | n/a — stopping rule, composes with 1/2/4 | yes |
 
 Recommendation from prior discussion: 1 or 2 as a stopgap if something needs
 to run this week; 4 if there's time to do it properly. 3 is the no-op
-fallback if 4 turns out not to be worth it.
+fallback if 4 turns out not to be worth it. 5 is close to free and worth
+doing regardless of which segmentation option ships, since it also closes a
+real edge-case bug against the 8 short `nature` videos.
