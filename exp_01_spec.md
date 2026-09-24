@@ -189,7 +189,20 @@ rows unless the boundary idea is being kept.
 
 ## Still open
 
-1. **Cut structure** — the 6 s finding is n=1. Sample ~4 per category. Sets `clipDur`.
+1. ~~**Cut structure** — the 6 s finding is n=1. Sample ~4 per category. Sets `clipDur`.~~
+   **Settled 2026-09-24 at n=600 — see `docs/cuts_analysis.md`.** The n=1
+   picture was wrong on the directed/undirected split: `social_directed` is
+   NOT continuous (only 10% zero-cut, same rate as `social_undir`). Median
+   gap is 6.01 s in both social categories, but only ~19–25% of individual
+   gaps actually land near 6 s — high per-category variance (CV 0.6–0.8).
+   Within a single video, gaps are often very regular, especially
+   `social_directed` (mean within-video CV 0.00 — near-metronomic; possibly a
+   multi-camera switch artifact rather than a content cut, worth checking
+   against source material). `clipDur = 6` is a reasonable single constant
+   for the social categories if one constant is wanted; `nature` behaves
+   differently (~7.9 s median, least regular, 25% zero-cut) and a
+   per-video/per-category `clipDur` would track the real structure better
+   than one global number.
 2. **Keyframe spacing** — decides seek-in-place vs. actually splitting. One command.
 3. **Which mode ships** — `transitions` or `interleave`. Both run; pilot both.
 4. **Fixation between segments** — `t_fix_between = 0.5` default vs `0` continuous. Pilot both.

@@ -24,12 +24,26 @@ What was settled, with evidence in the repo:
   same segment playlist with different boundaries. One playback loop serves
   both (`cclab.mode`).
 
-What is believed but not yet established:
+**Settled 2026-09-24** (was "believed but not yet established" at n=1 — see
+`docs/cuts_analysis.md` for the full writeup):
 
-- **Undirected social videos appear to contain a cut every 6 s**, and directed
-  ones appear to be continuous. This is **n = 1 per category** — one file each.
-  The spec's original "3 × 10 s" assumption looks wrong. Settling this is the
-  `cuts.csv` job below, and it decides `cclab.clipDur`.
+- `cuts.csv` now exists — all 600 videos, built and committed.
+- The n=1 belief was wrong on the directed/undirected split. **Directed
+  videos are not continuous**: `social_directed` has the same zero-cut rate
+  (10%) as `social_undir`, and the same median inter-cut gap (6.01 s) as
+  `social_undir`. The spec's original "3 × 10 s" assumption was also wrong,
+  same conclusion as before, now on real evidence instead of one file.
+- Gaps vary a lot *across* a category (CV 0.6–0.8) but are often very regular
+  *within* one video — `social_directed` especially so (near-metronomic when
+  cuts occur), which may mean those are multi-camera switch artifacts rather
+  than content cuts; worth checking against source material before treating
+  them as meaningful transitions.
+- `nature` is its own thing: fewer cuts (25% zero-cut), longer/less regular
+  gaps (~7.9 s median, CV 0.78) than either social category.
+- `clipDur = 6` is defensible as a single constant for the social categories;
+  a per-video/per-category value would track the real structure better if
+  the pipeline can support it. Decision not yet made — see `exp_01_spec.md`
+  open question #1.
 
 ---
 
@@ -57,7 +71,7 @@ data, then saves each frame.
 
 **Write the answer into `exp_01_spec.md`.** Everything downstream depends on it.
 
-### 2. Build the cut catalog — needs a machine on the lab LAN
+### 2. Build the cut catalog — DONE 2026-09-24, see `docs/cuts_analysis.md`
 
 Produces `video_ebm_dataset/cuts.csv`: keyframe positions and scene-cut
 positions for all 600 videos.
@@ -78,18 +92,18 @@ bash catalog_cuts.sh "$VID"
 
 Resumable — `cuts.csv` is its own progress ledger, so a dropped mount costs one
 file, not the run. For a long run: `nohup bash catalog_cuts.sh "$VID" > catalog.log 2>&1 &`
+(if you background it this way, don't `pgrep -f "catalog_cuts.sh"` to wait for
+it from a wrapper script that itself contains that string in its command
+line — it'll match itself and never exit. Wait on the PID instead.)
 
-Then spot-check the claim that motivated the whole job:
-
-```bash
-grep '^aggression01DVD'          video_ebm_dataset/cuts.csv | cut -d, -f3
-# one file so far: 6.006;12.012;18.018;24.024
-grep '^neutral_cam_directed01DVD' video_ebm_dataset/cuts.csv | cut -d, -f3
-# one file so far: (empty — no cuts)
-```
-
-If the 6 s pattern holds across undirected material, set `cclab.clipDur = 6`.
-Commit the CSV: it is small, and it is the evidence behind the segment design.
+Ran on the lab machine (local disk, not NAS/VPN): 600/600 in ~5 minutes.
+`cuts.csv` is committed. Joined against `MANIFEST.csv` by category with
+`video_ebm_dataset/analyze_cuts.py` (needs `nix develop` for pandas — bare
+`python3` isn't on `PATH` on this machine). **Full writeup:
+`docs/cuts_analysis.md`.** Short version: the n=1 "directed = continuous"
+belief was wrong; `clipDur = 6` is defensible for the social categories but
+`nature` behaves differently. `cclab.clipDur` decision still open — see
+`exp_01_spec.md` question #1.
 
 ### 3. Only if step 1 failed — re-encode with dense keyframes
 
