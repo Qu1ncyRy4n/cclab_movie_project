@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Interleave Options Demo</title>
-<meta name="description" content="Hardcoded timing simulation of the exp_01 interleave redesign options — baseline, options 1/2/4/5, using real cut timestamps from cuts.csv.">
+<meta name="description" content="Design-space picker + hardcoded timing simulations for the exp_01 interleave redesign, using real cut timestamps from cuts.csv.">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root {
@@ -85,6 +85,13 @@
   }
   .panel.active { display: block; }
 
+  .back-link {
+    background: none; border: none; color: var(--ink-dim); font-size: 12.5px;
+    cursor: pointer; padding: 0; margin-bottom: 12px; display: inline-flex;
+    align-items: center; gap: 4px;
+  }
+  .back-link:hover { color: var(--accent-a); }
+
   .desc { font-size: 13.5px; color: var(--ink-dim); margin: 0 0 14px; }
   .desc b { color: var(--ink); }
 
@@ -96,6 +103,7 @@
   .controls button.primary { background: var(--accent-a); color: #fff; border-color: var(--accent-a); }
   .controls select { padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--panel); color: var(--ink); }
   .controls label { font-size: 13px; color: var(--ink-dim); display: flex; align-items: center; gap: 5px; }
+  .controls input[type="range"] { width: 110px; vertical-align: middle; }
 
   /* the "screen" */
   .screen {
@@ -105,15 +113,15 @@
   }
   .screen .big-label { color: var(--screen-ink); font-size: 19px; font-weight: 600; }
   .screen .big-sub { color: var(--screen-ink); opacity: .75; font-size: 12.5px; margin-top: 4px; }
-  .screen .flash {
-    position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none;
-  }
 
-  /* timeline */
+  /* timeline — click or drag to scrub */
   .timeline { position: relative; height: 46px; border-radius: 6px; overflow: hidden;
-    border: 1px solid var(--border); display: flex; margin-bottom: 2px; }
+    border: 1px solid var(--border); display: flex; margin-bottom: 2px; cursor: pointer;
+    touch-action: none; }
+  .timeline:hover { border-color: var(--accent-a); }
   .seg { height: 100%; display: flex; align-items: center; justify-content: center;
-    font-size: 10.5px; color: var(--ink); border-right: 1px solid var(--panel); position: relative; }
+    font-size: 10.5px; color: var(--ink); border-right: 1px solid var(--panel); position: relative;
+    pointer-events: none; }
   .seg.A { background: var(--accent-a-dim); }
   .seg.B { background: var(--accent-b-dim); }
   .seg.N { background: var(--accent-n-dim); }
@@ -121,9 +129,10 @@
   .seg.TRUNC { background: repeating-linear-gradient(45deg, var(--accent-warn) 0 6px, transparent 6px 12px); opacity:.5; }
   .playhead {
     position: absolute; top: 0; bottom: 0; width: 2px; background: var(--accent-warn);
-    left: 0%; transition: left 0.03s linear;
+    left: 0%; pointer-events: none;
   }
-  .tl-scale { display: flex; justify-content: space-between; font-size: 10px; color: var(--ink-dim); margin-bottom: 14px; }
+  .tl-scale { display: flex; justify-content: space-between; font-size: 10px; color: var(--ink-dim); margin-bottom: 4px; }
+  .tl-hint { font-size: 10.5px; color: var(--ink-dim); margin: 0 0 14px; }
 
   /* bottom timing dialog — fixed to the bottom of the screen area */
   .hud {
@@ -138,22 +147,44 @@
   .legend { display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--ink-dim); margin: 10px 0 0; }
   .legend span { display:inline-flex; align-items:center; gap:5px; }
   .sw { width:10px; height:10px; border-radius:2px; display:inline-block; }
+
+  /* design-space matrix */
+  .matrix { display: grid; grid-template-columns: 110px repeat(4, 1fr); gap: 6px; font-size: 12px; }
+  .matrix-cell { border: 1px solid var(--border); border-radius: 6px; padding: 8px; background: var(--panel); }
+  .matrix-cell.head { background: var(--tab-bg); font-weight: 600; border: none; display: flex; align-items: center; font-size: 12.5px; }
+  .matrix-cell .dim { color: var(--ink-dim); font-size: 11px; }
+  .matrix-cell .warn { color: var(--accent-warn); }
+  .matrix-cell.impossible { background: repeating-linear-gradient(45deg, var(--tab-bg) 0 8px, var(--panel) 8px 16px); }
+  .matrix-cell.notbuilt { opacity: .7; font-style: italic; }
+  .matrix-cell.clickable { cursor: pointer; border-color: var(--accent-a); background: var(--accent-a-dim); transition: transform .1s; }
+  .matrix-cell.clickable:hover { transform: scale(1.02); }
+  .linklike { background: none; border: none; color: var(--accent-a); text-decoration: underline; cursor: pointer; font: inherit; padding: 0; }
+  .termbox { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin: 4px 0 16px; font-size: 12.5px; background: var(--tab-bg); }
+  .termbox b { color: var(--ink); }
+  @media (max-width: 640px) { .matrix { grid-template-columns: 80px repeat(4, minmax(90px,1fr)); overflow-x: auto; font-size: 10.5px; } }
+
+  /* naming-schemes tables */
+  .tbl { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin-bottom: 4px; font-size: 12.5px; }
+  .tbl .tr { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--border); }
+  .tbl .tr:first-child { border-top: none; }
+  .tbl .tr > div { padding: 7px 10px; }
+  .tbl .tr > div:first-child { border-right: 1px solid var(--border); background: var(--tab-bg); }
+  .tbl .tr.th { font-weight: 600; background: var(--tab-bg); }
+  .tbl .tr.th > div:first-child { background: var(--tab-bg); }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Interleave redesign — timing demo</h1>
+  <h1>Interleave redesign — design space</h1>
   <p class="sub">Hardcoded playback simulation, not real video. Companion to
     <code>docs/interleave_design_options_2026-09-24_0951.md</code> and
     <code>docs/cuts_analysis.md</code>. Real cut timestamps below are pulled
-    straight from <code>video_ebm_dataset/cuts.csv</code>.</p>
+    straight from <code>video_ebm_dataset/cuts.csv</code>. Start at
+    <b>Design space</b> — it's the picker; click any cell to open its player,
+    then "&larr; Design space" to come back.</p>
 
   <div class="tabs" id="tabs"></div>
   <div id="panels"></div>
-
-  <p class="sub" style="margin-top:18px;">Option 3 ("stay arbitrary") has no
-    tab — it's the Baseline tab, just without the claim that the timing means
-    anything content-wise.</p>
 </div>
 
 <script>
@@ -181,52 +212,123 @@ function buildAlternating(segDurA, segDurB, n, fixOn, labelA, labelB) {
   return segs;
 }
 
+function buildBlocked(segDur, fixOn, n, labelA, labelB) {
+  // n same-category segments, then switch — no alternation.
+  const segs = [];
+  const runs = [labelA, labelB];
+  runs.forEach((lab, ri) => {
+    for (let i = 0; i < n; i++) {
+      segs.push({ clip: ri === 0 ? 'A' : 'B', dur: segDur, label: lab.name, sub: lab.sub, idx: i + 1 });
+      if (fixOn && !(ri === runs.length - 1 && i === n - 1)) {
+        segs.push({ clip: 'FIX', dur: FIX_DUR, label: 'fixation dot', sub: 're-centers gaze' });
+      }
+    }
+  });
+  return segs;
+}
+
+function buildFreePool(segDur, fixOn, n, poolA, poolB) {
+  // Alternates A/B, but each segment's PARENT is drawn from a small pool
+  // instead of being locked to one clip for the whole trial.
+  const segs = [];
+  for (let i = 0; i < n; i++) {
+    const isA = i % 2 === 0;
+    const pool = isA ? poolA : poolB;
+    const parent = pool[Math.floor(i / 2) % pool.length];
+    segs.push({
+      clip: isA ? 'A' : 'B', dur: segDur,
+      label: isA ? 'undir shot' : 'directed shot',
+      sub: parent + (Math.floor(i / 2) > 0 && parent === pool[0] ? ' — parent repeats' : ' — new parent'),
+      idx: Math.floor(i / 2) + 1
+    });
+    if (fixOn && i < n - 1) segs.push({ clip: 'FIX', dur: FIX_DUR, label: 'fixation dot', sub: 're-centers gaze' });
+  }
+  return segs;
+}
+
 const TABS = [
   {
-    id: 'baseline',
-    title: 'Baseline (today)',
-    desc: 'What CONFI_exp01_transitions.m ships with right now: <b>interleaveSegDur = 2.5s</b>, ' +
-          '<b>interleaveClipTotal = 10s</b> → 8 fixed-length segments per trial, alternating. ' +
-          'Segment boundaries are an arbitrary clock, unrelated to either clip\'s real cuts.',
+    id: 'blocks-arb', num: 2,
+    title: '2. Fixed-length blocks',
+    matrixCell: 'Arbitrary slice × Blocked run',
+    desc: 'Same-category slices run back to back (UUU then DDD), not alternating. Slice length is an ' +
+          'arbitrary constant (drag the slider), unrelated to either clip\'s real content.',
     fixToggle: true,
-    build: (fixOn) => buildAlternating(2.5, 2.5, 8, fixOn,
+    durSlider: { min: 2, max: 10, step: 0.5, default: 5 },
+    legendA: 'social_undir (block)', legendB: 'social_directed (block)',
+    build: (fixOn, segDur) => buildBlocked(segDur, fixOn, 3,
+      { name: 'undir slice', sub: 'social_undir — aggression01DVD' },
+      { name: 'directed slice', sub: 'social_directed — aggr_cam_directed19DVD' })
+  },
+  {
+    id: 'fixedclock-pair', num: 3,
+    title: '3. Fixed-clock interleave — same two clips',
+    matrixCell: 'Arbitrary slice × Interleaved, same two clips',
+    desc: 'What <code>CONFI_exp01_transitions.m</code> ships with today (at 2.5s), merged with the ' +
+          '"tune the knob" idea (up to 7s+) into one control: drag the slider to see any segment length. ' +
+          'The same two clips alternate for the whole trial ("fixed pair"). Boundaries are an arbitrary ' +
+          'clock, unrelated to either clip\'s real cuts.',
+    fixToggle: true,
+    durSlider: { min: 1, max: 10, step: 0.5, default: 2.5 },
+    legendA: 'social_undir', legendB: 'social_directed',
+    build: (fixOn, segDur) => buildAlternating(segDur, segDur, 8, fixOn,
       { name: 'Clip A', sub: 'social_undir (e.g. aggression01DVD)' },
       { name: 'Clip B', sub: 'social_directed (e.g. aggr_cam_directed19DVD)' })
   },
   {
-    id: 'opt1',
-    title: 'Option 1: tune the knob',
-    desc: 'Same mechanism as Baseline, just a bigger constant: <b>interleaveSegDur = 7s</b>, ' +
-          '<b>interleaveClipTotal = 28s</b>. Zero new logic, still a global guess that won\'t fit ' +
-          'every clip\'s own rhythm.',
+    id: 'fixedclock-pool', num: 4,
+    title: '4. Fixed-clock interleave — new clip each cut',
+    matrixCell: 'Arbitrary slice × Interleaved, new clip each cut',
+    desc: 'Same arbitrary-length slicing as #3, but each segment is drawn from a small pool of clips ' +
+          'per category ("free pool") instead of being locked to the same two for the whole trial. ' +
+          'Watch the sub-label: the parent video changes between segments.',
     fixToggle: true,
-    build: (fixOn) => buildAlternating(7, 7, 8, fixOn,
-      { name: 'Clip A', sub: 'social_undir (e.g. aggression01DVD)' },
-      { name: 'Clip B', sub: 'social_directed (e.g. aggr_cam_directed19DVD)' })
+    durSlider: { min: 1, max: 10, step: 0.5, default: 2.5 },
+    legendA: 'social_undir', legendB: 'social_directed',
+    build: (fixOn, segDur) => buildFreePool(segDur, fixOn, 6,
+      ['aggression01DVD', 'aggression10DVD', 'aggression09DVD'],
+      ['aggr_cam_directed19DVD', 'aggr_cam_directed13DVD'])
   },
   {
-    id: 'opt2',
-    title: 'Option 2: pairs + fixation',
-    desc: 'Collapses to whole-clip blocks: one full clip, a fixation break, the other full clip. ' +
-          'Closest to the original pilot task\'s shape. <b>Not rapid A-B-A-B</b> — confirm with the ' +
-          'PI whether block alternation still counts as "interleaved."',
-    fixToggle: true,
-    build: (fixOn) => {
-      const segs = [
-        { clip: 'A', dur: 30.0, label: 'Clip A (full)', sub: 'social_undir — aggression01DVD, 30.0s', idx: 1 },
-      ];
-      if (fixOn) segs.push({ clip: 'FIX', dur: FIX_DUR, label: 'fixation dot', sub: 're-centers gaze' });
-      segs.push({ clip: 'B', dur: 30.0, label: 'Clip B (full)', sub: 'social_directed — aggr_cam_directed19DVD, 30.0s', idx: 1 });
-      if (fixOn) segs.push({ clip: 'FIX', dur: FIX_DUR, label: 'fixation → ITI', sub: 'into reward/ITI' });
-      return segs;
-    }
+    id: 'natshot-single', num: 5,
+    title: '5. Natural-shot, single clip (control)',
+    matrixCell: 'Natural shot × Separate',
+    desc: 'Not interleaved at all — one parent video\'s own real shots, played back to back in their ' +
+          '<b>original</b> order. &#9888; Content-identical to just playing the clip uncut — a control ' +
+          'confirming that splitting alone, with no reordering, changes nothing.',
+    fixToggle: false, legendA: 'nature (single clip)', legendB: null,
+    build: () => [
+      { clip: 'A', dur: 4.137, label: '00189DVD_a', sub: 'nature — shot 1 of 4, original order', idx: 1 },
+      { clip: 'A', dur: 14.115, label: '00189DVD_b', sub: 'nature — shot 2 of 4, original order', idx: 2 },
+      { clip: 'A', dur: 5.372, label: '00189DVD_c', sub: 'nature — shot 3 of 4, original order', idx: 3 },
+      { clip: 'A', dur: 6.473, label: '00189DVD_d', sub: 'nature — shot 4 of 4, original order', idx: 4 },
+    ]
   },
   {
-    id: 'opt4',
-    title: 'Option 4: natural shots',
+    id: 'natshot-blocks', num: 6,
+    title: '6. Natural-shot blocks',
+    matrixCell: 'Natural shot × Blocked run',
+    desc: 'The opposite of interleaving: several real shots from the <b>same</b> category run ' +
+          'consecutively before switching — UUU then DDD. Tests block-level/context adaptation instead ' +
+          'of a per-cut transition response.',
+    fixToggle: false, legendA: 'social_undir (block)', legendB: 'social_directed (block)',
+    build: () => [
+      { clip: 'A', dur: 6.006, label: 'undir', sub: 'aggression01DVD_s01', idx: 1 },
+      { clip: 'A', dur: 6.006, label: 'undir', sub: 'aggression01DVD_s02', idx: 2 },
+      { clip: 'A', dur: 6.006, label: 'undir', sub: 'aggression01DVD_s03', idx: 3 },
+      { clip: 'B', dur: 4.338, label: 'directed', sub: 'aggr_cam_directed19DVD_s01', idx: 1 },
+      { clip: 'B', dur: 4.337, label: 'directed', sub: 'aggr_cam_directed19DVD_s02', idx: 2 },
+      { clip: 'B', dur: 4.338, label: 'directed', sub: 'aggr_cam_directed19DVD_s03', idx: 3 },
+    ]
+  },
+  {
+    id: 'natshot-pair', num: 7,
+    title: '7. Natural-shot interleave — same two clips',
+    matrixCell: 'Natural shot × Interleaved, same two clips',
     desc: 'Segment length = that clip\'s <b>own</b> real cuts from <code>cuts.csv</code>, not a config ' +
-          'constant. Clip A = <code>aggr_cam_directed19DVD</code> (near-metronomic, ~4.34s shots), ' +
-          'Clip B = <code>aggression01DVD</code> (~6.0s shots). First 3 shots of each shown.',
+          'constant. Same two clips alternate all trial ("fixed pair"). Clip A = ' +
+          '<code>aggr_cam_directed19DVD</code> (near-metronomic, ~4.34s shots), Clip B = ' +
+          '<code>aggression01DVD</code> (~6.0s shots).',
     fixToggle: true,
     build: (fixOn) => {
       const aShots = [4.338, 4.337, 4.338]; // real cuts.csv gaps, aggr_cam_directed19DVD
@@ -244,29 +346,13 @@ const TABS = [
     }
   },
   {
-    id: 'opt5',
-    title: 'Option 5: min(A, B) trial length',
-    desc: 'A stopping rule, not a cutting rule — composes with 1/2/4. Trial length = ' +
-          '<b>min(clip A usable, clip B usable)</b> instead of a fixed budget. Here Clip B is one ' +
-          'of the 8 real short <code>nature</code> videos (<code>00364DVD.mp4</code>, 7.0s total) — ' +
-          'the trial is capped at 7.0s and the last segment is truncated, instead of overrunning B.',
-    fixToggle: false,
-    build: () => [
-      { clip: 'A', dur: 2.5, label: 'Clip A', sub: 'social_undir — aggression01DVD (30.0s available)', idx: 1 },
-      { clip: 'B', dur: 2.5, label: 'Clip B', sub: 'nature — 00364DVD.mp4 (only 7.0s total!)', idx: 1 },
-      { clip: 'A', dur: 2.0, label: 'Clip A (truncated)', sub: 'cut short — min(30.0, 7.0) = 7.0s reached', idx: 2, trunc: true },
-    ]
-  },
-  // -- Presentation schemes for a pre-split shot pool (undir_10a/b/c idea) --
-  // These assume shots already exist as named, addressable units (Scheme 4
-  // from the naming-schemes tab) and ask a different question: given that
-  // pool, how do you actually assemble a trial from it?
-  {
-    id: 'p1',
-    title: 'P1: cross-parent alternation',
-    desc: 'A/B alternation drawn from the whole category <b>shot pool</b>, not locked ' +
-          'to 2 specific parent clips for the trial — each segment can come from a ' +
-          'different source video. Watch the sub-label: the parent changes between A1 and A2.',
+    id: 'natshot-pool', num: 8,
+    title: '8. Natural-shot interleave — new clip each cut',
+    matrixCell: 'Natural shot × Interleaved, new clip each cut',
+    desc: 'A/B alternation drawn from the whole category shot pool ("free pool") — not locked to 2 ' +
+          'specific parent clips. Watch the sub-label: the parent changes between A1 and A2.<br>' +
+          'Variants: <button class="linklike" onclick="showPanel(\'natshot-matched\')">9. duration-matched</button> · ' +
+          '<button class="linklike" onclick="showPanel(\'natshot-chain\')">10. 3-way N/D/U chain</button>',
     fixToggle: false, legendA: 'social_undir', legendB: 'social_directed',
     build: () => [
       { clip: 'A', dur: 6.006, label: 'undir shot', sub: 'aggression01DVD_s01', idx: 1 },
@@ -277,26 +363,14 @@ const TABS = [
     ]
   },
   {
-    id: 'p2',
-    title: 'P2: in-order reassembly (control)',
-    desc: 'Not interleaved at all — one parent video\'s own shots, played back to back in ' +
-          'their <b>original</b> order. Useful as a control condition: same shot-level ' +
-          'granularity as the other schemes, zero artificial reordering.',
-    fixToggle: false, legendA: 'nature (single clip)', legendB: null,
-    build: () => [
-      { clip: 'A', dur: 4.137, label: '00189DVD_a', sub: 'nature — shot 1 of 4, original order', idx: 1 },
-      { clip: 'A', dur: 14.115, label: '00189DVD_b', sub: 'nature — shot 2 of 4, original order', idx: 2 },
-      { clip: 'A', dur: 5.372, label: '00189DVD_c', sub: 'nature — shot 3 of 4, original order', idx: 3 },
-      { clip: 'A', dur: 6.473, label: '00189DVD_d', sub: 'nature — shot 4 of 4, original order', idx: 4 },
-    ]
-  },
-  {
-    id: 'p3',
-    title: 'P3: duration-matched triple',
-    desc: 'Your original cut-count-matching idea, fixed at the shot level: instead of matching ' +
-          'whole VIDEOS by cut <b>count</b> (population-mismatched — 4 nature videos at n=6 vs. ' +
-          '23 undirected), match individual <b>shots by real duration</b>. All three segments below ' +
-          'are within ~0.6s of each other, pulled straight from cuts.csv.',
+    id: 'natshot-matched', num: 9,
+    title: '9. Natural-shot interleave — duration-matched',
+    matrixCell: 'Natural shot × Interleaved, new clip each cut (variant)',
+    desc: 'Fixes the original cut-count-matching idea at the shot level: instead of matching whole ' +
+          'VIDEOS by cut <b>count</b> (population-mismatched — 4 nature videos at n=6 vs. 23 undirected), ' +
+          'match individual <b>shots by real duration</b>. All segments below are within ~0.6s of each other.<br>' +
+          'Variants: <button class="linklike" onclick="showPanel(\'natshot-pool\')">8. free (unmatched)</button> · ' +
+          '<button class="linklike" onclick="showPanel(\'natshot-chain\')">10. 3-way N/D/U chain</button>',
     fixToggle: false, legendA: 'social_undir', legendB: 'social_directed', legendN: 'nature',
     build: () => [
       { clip: 'A', dur: 6.006, label: 'undir', sub: 'aggression01DVD_s01 — 6.01s', idx: 1 },
@@ -308,28 +382,14 @@ const TABS = [
     ]
   },
   {
-    id: 'p4',
-    title: 'P4: blocked (no alternation)',
-    desc: 'The opposite of interleaving: several shots from the <b>same</b> category run ' +
-          'consecutively before switching — UUU then DDD, not U-D-U-D. Tests block-level/context ' +
-          'adaptation instead of a per-cut transition response. A different question, not a ' +
-          'replacement for the alternating schemes.',
-    fixToggle: false, legendA: 'social_undir (block)', legendB: 'social_directed (block)',
-    build: () => [
-      { clip: 'A', dur: 6.006, label: 'undir', sub: 'aggression01DVD_s01', idx: 1 },
-      { clip: 'A', dur: 6.006, label: 'undir', sub: 'aggression01DVD_s02', idx: 2 },
-      { clip: 'A', dur: 6.006, label: 'undir', sub: 'aggression01DVD_s03', idx: 3 },
-      { clip: 'B', dur: 4.338, label: 'directed', sub: 'aggr_cam_directed19DVD_s01', idx: 1 },
-      { clip: 'B', dur: 4.337, label: 'directed', sub: 'aggr_cam_directed19DVD_s02', idx: 2 },
-      { clip: 'B', dur: 4.338, label: 'directed', sub: 'aggr_cam_directed19DVD_s03', idx: 3 },
-    ]
-  },
-  {
-    id: 'p5',
-    title: 'P5: long 3-way chain',
-    desc: 'Your <code>Uc, Da, Ud, Db, Ue, Dc, Na...</code> idea — now straightforward, because ' +
-          'each unit is a pre-registered shot with its own real duration instead of something ' +
-          'computed on the fly. Rotates all three categories, drawing different parents each time.',
+    id: 'natshot-chain', num: 10,
+    title: '10. Natural-shot interleave — 3-way N/D/U chain',
+    matrixCell: 'Natural shot × Interleaved, new clip each cut (variant)',
+    desc: 'The <code>Uc, Da, Ud, Db, Ue, Dc, Na...</code> idea — straightforward once each unit is a ' +
+          'pre-registered shot with its own real duration instead of something computed on the fly. ' +
+          'Rotates all three categories, drawing different parents each time.<br>' +
+          'Variants: <button class="linklike" onclick="showPanel(\'natshot-pool\')">8. free (unmatched)</button> · ' +
+          '<button class="linklike" onclick="showPanel(\'natshot-matched\')">9. duration-matched</button>',
     fixToggle: false, legendA: 'social_undir', legendB: 'social_directed', legendN: 'nature',
     build: () => [
       { clip: 'A', dur: 6.006, label: 'undir', sub: 'aggression01DVD_s01', idx: 1 },
@@ -338,6 +398,21 @@ const TABS = [
       { clip: 'A', dur: 15.015, label: 'undir', sub: 'aggression10DVD_s01 — new parent', idx: 2 },
       { clip: 'B', dur: 4.337, label: 'directed', sub: 'aggr_cam_directed19DVD_s02', idx: 2 },
       { clip: 'N', dur: 14.115, label: 'nature', sub: '00189DVD_b', idx: 2 },
+    ]
+  },
+  {
+    id: 'trial-cap', num: '†',
+    title: 'Modifier: trial-length cap',
+    matrixCell: 'Modifier — applies across cells, not a cell itself',
+    desc: 'Not a cutting rule, a <b>stopping</b> rule — composes with any interleaved cell. Trial length = ' +
+          '<b>min(clip A usable, clip B usable)</b> instead of a fixed budget. Here Clip B is one of the ' +
+          '8 real short <code>nature</code> videos (<code>00364DVD.mp4</code>, 7.0s total) — the trial ' +
+          'is capped at 7.0s and the last segment is truncated, instead of overrunning B.',
+    fixToggle: false,
+    build: () => [
+      { clip: 'A', dur: 2.5, label: 'Clip A', sub: 'social_undir — aggression01DVD (30.0s available)', idx: 1 },
+      { clip: 'B', dur: 2.5, label: 'Clip B', sub: 'nature — 00364DVD.mp4 (only 7.0s total!)', idx: 1 },
+      { clip: 'A', dur: 2.0, label: 'Clip A (truncated)', sub: 'cut short — min(30.0, 7.0) = 7.0s reached', idx: 2, trunc: true },
     ]
   },
 ];
@@ -351,7 +426,8 @@ const state = {}; // per-tab: { segs, total, playing, t, speed }
 
 function computeState(tab) {
   const fixOn = tab.fixToggle ? document.getElementById('fix-' + tab.id).checked : false;
-  const segs = tab.build(fixOn);
+  const segDur = tab.durSlider ? parseFloat(document.getElementById('dur-' + tab.id).value) : null;
+  const segs = tab.build(fixOn, segDur);
   let acc = 0;
   segs.forEach(s => { s.start = acc; acc += s.dur; });
   return { segs, total: acc, playing: false, t: 0, speed: 1 };
@@ -407,7 +483,6 @@ function renderFrame(tab) {
     '<div><span class="k">next</span>' + (next ? (next.clip === 'FIX' ? 'fixation' : next.label) : '<span class="warn">end of trial</span>') + '</div>';
 }
 
-let rafId = null;
 let lastTs = null;
 function tick(ts) {
   if (lastTs == null) lastTs = ts;
@@ -421,7 +496,7 @@ function tick(ts) {
       renderFrame(tab);
     }
   }
-  rafId = requestAnimationFrame(tick);
+  requestAnimationFrame(tick);
 }
 requestAnimationFrame(tick);
 
@@ -439,30 +514,57 @@ function rebuild(tab) {
   if (wasPlaying) { state[tab.id].playing = true; updatePlayBtn(tab.id); }
 }
 
+// Click or drag anywhere on the timeline to scrub to that point in time.
+function attachScrub(tab) {
+  const tl = document.getElementById('tl-' + tab.id);
+  let dragging = false;
+  function seek(e) {
+    const rect = tl.getBoundingClientRect();
+    const frac = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const st = state[tab.id];
+    st.t = frac * st.total;
+    renderFrame(tab);
+  }
+  tl.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    state[tab.id].playing = false;
+    updatePlayBtn(tab.id);
+    tl.setPointerCapture(e.pointerId);
+    seek(e);
+  });
+  tl.addEventListener('pointermove', (e) => { if (dragging) seek(e); });
+  tl.addEventListener('pointerup', () => { dragging = false; });
+  tl.addEventListener('pointercancel', () => { dragging = false; });
+}
+
 // ---------------------------------------------------------------------
-// DOM scaffolding
+// Navigation — Design space is the only picker. Scheme tabs have no top
+// nav button of their own; they're reached by clicking a matrix cell and
+// left via the "← Design space" link at the top of the panel.
+// ---------------------------------------------------------------------
+
+function showPanel(id) {
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  const btn = document.getElementById('tabbtn-' + id);
+  if (btn) btn.classList.add('active');
+  const panel = document.getElementById('panel-' + id);
+  if (panel) panel.classList.add('active');
+}
+
+// ---------------------------------------------------------------------
+// DOM scaffolding for the player tabs (no nav button — matrix-only entry)
 // ---------------------------------------------------------------------
 
 const tabsEl = document.getElementById('tabs');
 const panelsEl = document.getElementById('panels');
 
-TABS.forEach((tab, i) => {
-  const btn = document.createElement('button');
-  btn.id = 'tabbtn-' + tab.id;
-  btn.textContent = tab.title;
-  btn.className = i === 0 ? 'active' : '';
-  btn.onclick = () => {
-    document.querySelectorAll('#tabs button').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('panel-' + tab.id).classList.add('active');
-  };
-  tabsEl.appendChild(btn);
-
+TABS.forEach(tab => {
   const panel = document.createElement('div');
-  panel.className = 'panel' + (i === 0 ? ' active' : '');
+  panel.className = 'panel';
   panel.id = 'panel-' + tab.id;
   panel.innerHTML =
+    '<button class="back-link" onclick="showPanel(\'matrix\')">&larr; Design space</button>' +
     '<p class="desc">' + tab.desc + '</p>' +
     '<div class="controls">' +
       '<button class="primary" id="play-' + tab.id + '">Play</button>' +
@@ -472,23 +574,26 @@ TABS.forEach((tab, i) => {
         '<option value="4" selected>4&times;</option><option value="8">8&times;</option>' +
       '</select></label>' +
       (tab.fixToggle ? '<label><input type="checkbox" id="fix-' + tab.id + '" checked> fixation between segments (t_fix_between)</label>' : '') +
+      (tab.durSlider ? '<label>segment length <input type="range" id="dur-' + tab.id + '" min="' + tab.durSlider.min + '" max="' + tab.durSlider.max + '" step="' + tab.durSlider.step + '" value="' + tab.durSlider.default + '"> <span id="durval-' + tab.id + '">' + tab.durSlider.default.toFixed(1) + 's</span></label>' : '') +
     '</div>' +
     '<div class="screen" id="screen-' + tab.id + '"><div><div class="big-label"></div><div class="big-sub"></div></div></div>' +
     '<div class="timeline" id="tl-' + tab.id + '"><div class="playhead"></div></div>' +
     '<div class="tl-scale" id="scale-' + tab.id + '"></div>' +
+    '<p class="tl-hint">click or drag the timeline above to scrub</p>' +
     '<div class="hud" id="hud-' + tab.id + '"></div>' +
     '<div class="legend">' +
       '<span><i class="sw" style="background:var(--accent-a)"></i>' + (tab.legendA || 'Clip A') + '</span>' +
       (tab.legendB !== null ? '<span><i class="sw" style="background:var(--accent-b)"></i>' + (tab.legendB || 'Clip B') + '</span>' : '') +
       (tab.legendN ? '<span><i class="sw" style="background:var(--accent-n)"></i>' + tab.legendN + '</span>' : '') +
       '<span><i class="sw" style="background:var(--accent-fix)"></i>fixation</span>' +
-      (tab.id === 'opt5' ? '<span><i class="sw" style="background:var(--accent-warn);opacity:.6"></i>truncated (budget exhausted)</span>' : '') +
+      (tab.id === 'trial-cap' ? '<span><i class="sw" style="background:var(--accent-warn);opacity:.6"></i>truncated (budget exhausted)</span>' : '') +
     '</div>';
   panelsEl.appendChild(panel);
 });
 
 TABS.forEach(tab => {
   rebuild(tab);
+  attachScrub(tab);
   document.getElementById('play-' + tab.id).onclick = () => {
     const st = state[tab.id];
     if (st.t >= st.total) st.t = 0;
@@ -507,22 +612,23 @@ TABS.forEach(tab => {
   if (tab.fixToggle) {
     document.getElementById('fix-' + tab.id).onchange = () => rebuild(tab);
   }
+  if (tab.durSlider) {
+    const durInput = document.getElementById('dur-' + tab.id);
+    durInput.oninput = () => {
+      document.getElementById('durval-' + tab.id).textContent = parseFloat(durInput.value).toFixed(1) + 's';
+      rebuild(tab);
+    };
+  }
 });
 
 // ---------------------------------------------------------------------
-// "Naming schemes" tab — static reference, not a player. Kept separate
-// from the TABS/player engine above on purpose: this is a different kind
-// of content (a comparison table), not a timing simulation.
+// "Naming schemes" — static reference, not a player.
 // ---------------------------------------------------------------------
 (function () {
   const schemeBtn = document.createElement('button');
+  schemeBtn.id = 'tabbtn-schemes';
   schemeBtn.textContent = 'Naming schemes';
-  schemeBtn.onclick = () => {
-    document.querySelectorAll('#tabs button').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    schemeBtn.classList.add('active');
-    document.getElementById('panel-schemes').classList.add('active');
-  };
+  schemeBtn.onclick = () => showPanel('schemes');
   tabsEl.appendChild(schemeBtn);
 
   const panel = document.createElement('div');
@@ -530,12 +636,12 @@ TABS.forEach(tab => {
   panel.id = 'panel-schemes';
   panel.innerHTML = `
     <p class="desc">Four ways to give each natural shot a stable identity
-      (your <code>undir_10 &rarr; undir_10a, b, c</code> idea), applied to two
+      (the <code>undir_10 &rarr; undir_10a, b, c</code> idea), applied to two
       <b>real</b> videos from <code>cuts.csv</code>: <code>aggression10DVD</code>
       (social_undir, 1 real cut &rarr; 2 shots) and <code>aggression01DVD</code>
       (social_undir, 4 real cuts &rarr; 5 shots, 30.035s total).</p>
 
-    <h3 style="font-size:14px;margin:16px 0 6px;">1. Letter suffix — your proposal</h3>
+    <h3 style="font-size:14px;margin:16px 0 6px;">1. Letter suffix</h3>
     <p class="desc" style="margin-bottom:6px;">Underscore added before the letter
       so it doesn't run into the filename's own trailing digits.</p>
     <div class="tbl">
@@ -567,8 +673,8 @@ TABS.forEach(tab => {
     </div>
     <p class="desc">Timestamps in centiseconds (<code>1502</code> = 15.02s). The name
       alone tells you the exact boundaries — no lookup table needed, which matters
-      most if these ever become <b>real split files</b> (Option 6-B). Longer, less
-      natural to say, and two numbers to parse instead of one.</p>
+      most if these ever become real split files. Longer, less natural to say, and
+      two numbers to parse instead of one.</p>
 
     <h3 style="font-size:14px;margin:16px 0 6px;">4. Structured tuple — recommended as the underlying data model</h3>
     <p class="desc" style="margin-bottom:6px;">Not a single string at all — parent,
@@ -600,107 +706,86 @@ TABS.forEach(tab => {
 })();
 
 // ---------------------------------------------------------------------
-// "Design space" tab — the 2-axis generalization: unit type x arrangement.
-// Every Option/P tab above is one cell in this grid. Clickable cells jump
-// straight to the tab that occupies them.
+// "Design space" — the picker. Default landing panel. Every scheme tab
+// above is one cell of this grid; click a cell to open it.
 // ---------------------------------------------------------------------
-function goToTab(id) {
-  const btn = document.getElementById('tabbtn-' + id);
-  if (btn) btn.click();
-}
-
 (function () {
   const btn = document.createElement('button');
+  btn.id = 'tabbtn-matrix';
+  btn.className = 'active';
   btn.textContent = 'Design space';
-  btn.onclick = () => {
-    document.querySelectorAll('#tabs button').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('panel-matrix').classList.add('active');
-  };
-  tabsEl.appendChild(btn);
+  btn.onclick = () => showPanel('matrix');
+  tabsEl.insertBefore(btn, tabsEl.firstChild);
 
   function cell(html, opts) {
     opts = opts || {};
     const cls = 'matrix-cell' + (opts.go ? ' clickable' : '') + (opts.status ? ' ' + opts.status : '');
-    const click = opts.go ? `onclick="goToTab('${opts.go}')"` : '';
+    const click = opts.go ? `onclick="showPanel('${opts.go}')"` : '';
     return `<div class="${cls}" ${click}>${html}</div>`;
   }
 
   const panel = document.createElement('div');
-  panel.className = 'panel';
+  panel.className = 'panel active';
   panel.id = 'panel-matrix';
   panel.innerHTML = `
-    <p class="desc">Every tab in this demo is one cell of a 2-axis grid, not an
-      unrelated list. <b>Rows</b> = unit type (how the video gets cut).
-      <b>Columns</b> = arrangement (how units from different categories sit in
-      time). Click a cell to jump to its tab. Full writeup:
+    <p class="desc">Every scheme is one cell of a 2-axis grid, not an unrelated
+      list. <b>Rows</b> = unit type (how the video gets cut). <b>Columns</b> =
+      arrangement (how units from different categories sit in time). Click a
+      cell to open its player. Full writeup:
       <code>docs/interleave_design_options_2026-09-24_0951.md</code>,
       "Design-space generalization."</p>
+
+    <div class="termbox">
+      <b>"Same two clips"</b> (a.k.a. <i>fixed pair</i>) — one A clip and one B
+      clip are picked at the start of the trial and alternate for its whole
+      length; the identity of "the A clip" never changes mid-trial.<br>
+      <b>"New clip each cut"</b> (a.k.a. <i>free pool</i>) — every segment is
+      drawn independently from the category's whole pool of clips; what's on
+      screen can be a <i>different source video</i> at every cut, not just
+      different content from the same one.
+    </div>
 
     <div class="matrix">
       <div class="matrix-cell head"></div>
       <div class="matrix-cell head">Separate</div>
       <div class="matrix-cell head">Blocked run</div>
-      <div class="matrix-cell head">Interleaved,<br>fixed pair</div>
-      <div class="matrix-cell head">Interleaved,<br>free pool</div>
+      <div class="matrix-cell head">Same two clips<br>(interleaved)</div>
+      <div class="matrix-cell head">New clip each cut<br>(interleaved)</div>
 
       <div class="matrix-cell head">Full video</div>
-      ${cell('<b>Original pilot task</b><br><span class="dim">RUN_freeviewingTraining_movie.m — already built &amp; piloted, not part of exp_01</span>')}
+      ${cell('<b>1. Classic single clip</b><br><span class="dim">= the original pilot task, RUN_freeviewingTraining_movie.m — already built &amp; piloted, not part of exp_01</span>')}
       ${cell('<span class="dim">not meaningful — just consecutive trials in the original design</span>')}
-      ${cell('<b class="warn">structurally impossible</b><br><span class="dim">can\'t rapid-alternate without cutting the video</span>', {status:'impossible'})}
-      ${cell('<b class="warn">structurally impossible</b><br><span class="dim">same reason</span>', {status:'impossible'})}
+      ${cell('<b class="warn">impossible</b><br><span class="dim">can\'t rapid-alternate without cutting the video</span>', {status:'impossible'})}
+      ${cell('<b class="warn">impossible</b><br><span class="dim">same reason</span>', {status:'impossible'})}
 
       <div class="matrix-cell head">Arbitrary slice</div>
-      ${cell('<span class="dim">not built — low value, no principled boundaries, no partner</span>', {status:'notbuilt'})}
-      ${cell('<span class="dim">not built — easy extension of P4 with fixed-length slices</span>', {status:'notbuilt'})}
-      ${cell('<b>Baseline / Option 1</b><br><span class="dim">today\'s code</span>', {go:'baseline'})}
-      ${cell('<span class="dim">not built — easy extension of Baseline, pool draws instead of 2 fixed clips</span>', {status:'notbuilt'})}
+      ${cell('<span class="dim">not built — low value: no principled boundaries, and no partner to justify "interleaved"</span>', {status:'notbuilt'})}
+      ${cell('<b>2. Fixed-length blocks</b>', {go:'blocks-arb'})}
+      ${cell('<b>3. Fixed-clock interleave</b><br><span class="dim">same two clips</span>', {go:'fixedclock-pair'})}
+      ${cell('<b>4. Fixed-clock interleave</b><br><span class="dim">new clip each cut</span>', {go:'fixedclock-pool'})}
 
       <div class="matrix-cell head">Natural shot</div>
-      ${cell('<b>P2</b><br><span class="dim">⚠ content-identical to Full video × Separate — a control, not a new design</span>', {go:'p2'})}
-      ${cell('<b>P4</b>', {go:'p4'})}
-      ${cell('<b>Option 4</b>', {go:'opt4'})}
-      ${cell('<b>P1</b> / <b>P3</b> / <b>P5</b><br><span class="dim">free-pool, duration-matched, 3-way chain</span>', {go:'p1'})}
+      ${cell('<b>5. Natural-shot, single clip</b><br><span class="dim">&#9888; content-identical to Full video × Separate — a control, not a new design</span>', {go:'natshot-single'})}
+      ${cell('<b>6. Natural-shot blocks</b>', {go:'natshot-blocks'})}
+      ${cell('<b>7. Natural-shot interleave</b><br><span class="dim">same two clips</span>', {go:'natshot-pair'})}
+      ${cell('<b>8, 9, 10. Natural-shot interleave</b><br><span class="dim">new clip each cut — free / duration-matched / 3-way N-D-U</span>', {go:'natshot-pool'})}
     </div>
 
     <p class="desc" style="margin-top:14px;">Two more things vary independently of
       both axes — modifiers on a cell, not cells of their own: <b>trial-length rule</b>
-      (fixed constant vs. <button class="linklike" onclick="goToTab('opt5')">Option 5</button>'s
-      min(clip A, clip B)), and <b>matching criterion</b> for interleaved cells
-      (none / duration-matched / cut-count-matched — the last one dropped for a
-      population-mismatch problem, see <code>docs/cuts_analysis.md</code>).</p>
+      (fixed constant vs. <button class="linklike" onclick="showPanel('trial-cap')">the min(clip A, clip B) modifier</button>),
+      and <b>matching criterion</b> for "new clip each cut" cells (none / duration-matched
+      [tab 9] / cut-count-matched — the last one dropped for a population-mismatch
+      problem, see <code>docs/cuts_analysis.md</code>).</p>
 
     <p class="desc"><b>What the grid makes obvious that a flat list didn't:</b>
       "PI wants interleaved" already rules out the entire Full-video row — both
       interleaved cells there aren't just unbuilt, they're impossible. Natural
-      shot is the only row with a meaningful answer in every column. And P2 is a
+      shot is the only row with a meaningful answer in every column. And tab 5 is a
       control, not a competing design.</p>
   `;
   panelsEl.appendChild(panel);
 })();
 </script>
-
-<style>
-  .matrix { display: grid; grid-template-columns: 110px repeat(4, 1fr); gap: 6px; font-size: 12px; }
-  .matrix-cell { border: 1px solid var(--border); border-radius: 6px; padding: 8px; background: var(--panel); }
-  .matrix-cell.head { background: var(--tab-bg); font-weight: 600; border: none; display: flex; align-items: center; font-size: 12.5px; }
-  .matrix-cell .dim { color: var(--ink-dim); font-size: 11px; }
-  .matrix-cell .warn { color: var(--accent-warn); }
-  .matrix-cell.impossible { background: repeating-linear-gradient(45deg, var(--tab-bg) 0 8px, var(--panel) 8px 16px); }
-  .matrix-cell.notbuilt { opacity: .7; font-style: italic; }
-  .matrix-cell.clickable { cursor: pointer; border-color: var(--accent-a); background: var(--accent-a-dim); transition: transform .1s; }
-  .matrix-cell.clickable:hover { transform: scale(1.02); }
-  .linklike { background: none; border: none; color: var(--accent-a); text-decoration: underline; cursor: pointer; font: inherit; padding: 0; }
-  @media (max-width: 640px) { .matrix { grid-template-columns: 80px repeat(4, minmax(90px,1fr)); overflow-x: auto; font-size: 10.5px; } }
-
-  .tbl { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin-bottom: 4px; font-size: 12.5px; }
-  .tbl .tr { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--border); }
-  .tbl .tr:first-child { border-top: none; }
-  .tbl .tr > div { padding: 7px 10px; }
-  .tbl .tr > div:first-child { border-right: 1px solid var(--border); background: var(--tab-bg); }
-  .tbl .tr.th { font-weight: 600; background: var(--tab-bg); }
-  .tbl .tr.th > div:first-child { background: var(--tab-bg); }
-</style>
 </body>
 </html>
