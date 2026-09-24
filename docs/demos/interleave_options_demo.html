@@ -416,6 +416,106 @@ TABS.forEach(tab => {
     document.getElementById('fix-' + tab.id).onchange = () => rebuild(tab);
   }
 });
+
+// ---------------------------------------------------------------------
+// "Naming schemes" tab — static reference, not a player. Kept separate
+// from the TABS/player engine above on purpose: this is a different kind
+// of content (a comparison table), not a timing simulation.
+// ---------------------------------------------------------------------
+(function () {
+  const schemeBtn = document.createElement('button');
+  schemeBtn.textContent = 'Naming schemes';
+  schemeBtn.onclick = () => {
+    document.querySelectorAll('#tabs button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    schemeBtn.classList.add('active');
+    document.getElementById('panel-schemes').classList.add('active');
+  };
+  tabsEl.appendChild(schemeBtn);
+
+  const panel = document.createElement('div');
+  panel.className = 'panel';
+  panel.id = 'panel-schemes';
+  panel.innerHTML = `
+    <p class="desc">Four ways to give each natural shot a stable identity
+      (your <code>undir_10 &rarr; undir_10a, b, c</code> idea), applied to two
+      <b>real</b> videos from <code>cuts.csv</code>: <code>aggression10DVD</code>
+      (social_undir, 1 real cut &rarr; 2 shots) and <code>aggression01DVD</code>
+      (social_undir, 4 real cuts &rarr; 5 shots, 30.035s total).</p>
+
+    <h3 style="font-size:14px;margin:16px 0 6px;">1. Letter suffix — your proposal</h3>
+    <p class="desc" style="margin-bottom:6px;">Underscore added before the letter
+      so it doesn't run into the filename's own trailing digits.</p>
+    <div class="tbl">
+      <div class="tr th"><div>aggression10DVD (2 shots)</div><div>aggression01DVD (5 shots)</div></div>
+      <div class="tr"><div>aggression10DVD_a, aggression10DVD_b</div>
+        <div>aggression01DVD_a … aggression01DVD_e</div></div>
+    </div>
+    <p class="desc">Reads naturally out loud, easy to write in notes. Caps at 26
+      shots/video — a complete non-issue here (max observed is 10). Fine to parse
+      programmatically (split on the last <code>_</code>), but nothing stops
+      someone typing <code>_A</code> vs <code>_a</code> inconsistently.</p>
+
+    <h3 style="font-size:14px;margin:16px 0 6px;">2. Zero-padded numeric index</h3>
+    <div class="tbl">
+      <div class="tr th"><div>aggression10DVD (2 shots)</div><div>aggression01DVD (5 shots)</div></div>
+      <div class="tr"><div>aggression10DVD_s01, aggression10DVD_s02</div>
+        <div>aggression01DVD_s01 … aggression01DVD_s05</div></div>
+    </div>
+    <p class="desc">No 26-item ceiling, always sorts correctly as text (<code>_s09</code>
+      &lt; <code>_s10</code>), unambiguous regex to recover the index
+      (<code>_s(\\d+)$</code>). Slightly less natural to say out loud than letters.</p>
+
+    <h3 style="font-size:14px;margin:16px 0 6px;">3. Timestamp-embedded (self-describing)</h3>
+    <div class="tbl">
+      <div class="tr th"><div>aggression10DVD (2 shots)</div><div>aggression01DVD (5 shots)</div></div>
+      <div class="tr"><div>aggression10DVD_t0000-1502<br>aggression10DVD_t1502-3003</div>
+        <div>aggression01DVD_t0000-0601<br>aggression01DVD_t0601-1201<br>aggression01DVD_t1201-1802<br>
+          aggression01DVD_t1802-2402<br>aggression01DVD_t2402-3004</div></div>
+    </div>
+    <p class="desc">Timestamps in centiseconds (<code>1502</code> = 15.02s). The name
+      alone tells you the exact boundaries — no lookup table needed, which matters
+      most if these ever become <b>real split files</b> (Option 6-B). Longer, less
+      natural to say, and two numbers to parse instead of one.</p>
+
+    <h3 style="font-size:14px;margin:16px 0 6px;">4. Structured tuple — recommended as the underlying data model</h3>
+    <p class="desc" style="margin-bottom:6px;">Not a single string at all — parent,
+      index, start and duration stay separate fields (exactly how
+      <code>buildSequence.m</code> already keeps <code>.name</code> / <code>.category</code>
+      / <code>.sourceFile</code> apart rather than concatenated). A display label
+      like Scheme 1 or 2 gets generated only for logging — nothing ever has to
+      parse it back apart.</p>
+    <div class="tbl">
+      <div class="tr th"><div>field</div><div>shot 3 of aggression01DVD</div></div>
+      <div class="tr"><div>parent</div><div>aggression01DVD.mp4</div></div>
+      <div class="tr"><div>shot_index</div><div>3</div></div>
+      <div class="tr"><div>start_s</div><div>12.012</div></div>
+      <div class="tr"><div>dur_s</div><div>6.006</div></div>
+      <div class="tr"><div>category</div><div>social_undir</div></div>
+      <div class="tr"><div>display_label <i>(generated, Scheme 1)</i></div><div>aggression01DVD_c</div></div>
+    </div>
+
+    <h3 style="font-size:14px;margin:18px 0 6px;">Recommendation</h3>
+    <p class="desc">Store as <b>Scheme 4</b> (separate fields in a <code>shots.csv</code>
+      built from <code>cuts.csv</code> + <code>durations.csv</code> — no new video files,
+      keeps the "seeked in place" principle from <code>docs/PICKUP.md</code> intact).
+      Generate <b>Scheme 1</b> (letters) as the human-facing label for talking about
+      clips, notes, and the PI — the 26-shot ceiling that would rule it out as a
+      storage format is irrelevant once it's just a display alias over Scheme 4's
+      real fields.</p>
+  `;
+  panelsEl.appendChild(panel);
+})();
 </script>
+
+<style>
+  .tbl { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin-bottom: 4px; font-size: 12.5px; }
+  .tbl .tr { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--border); }
+  .tbl .tr:first-child { border-top: none; }
+  .tbl .tr > div { padding: 7px 10px; }
+  .tbl .tr > div:first-child { border-right: 1px solid var(--border); background: var(--tab-bg); }
+  .tbl .tr.th { font-weight: 600; background: var(--tab-bg); }
+  .tbl .tr.th > div:first-child { background: var(--tab-bg); }
+</style>
 </body>
 </html>
