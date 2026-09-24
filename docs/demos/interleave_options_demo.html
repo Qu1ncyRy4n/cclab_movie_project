@@ -448,6 +448,7 @@ const panelsEl = document.getElementById('panels');
 
 TABS.forEach((tab, i) => {
   const btn = document.createElement('button');
+  btn.id = 'tabbtn-' + tab.id;
   btn.textContent = tab.title;
   btn.className = i === 0 ? 'active' : '';
   btn.onclick = () => {
@@ -597,9 +598,102 @@ TABS.forEach(tab => {
   `;
   panelsEl.appendChild(panel);
 })();
+
+// ---------------------------------------------------------------------
+// "Design space" tab — the 2-axis generalization: unit type x arrangement.
+// Every Option/P tab above is one cell in this grid. Clickable cells jump
+// straight to the tab that occupies them.
+// ---------------------------------------------------------------------
+function goToTab(id) {
+  const btn = document.getElementById('tabbtn-' + id);
+  if (btn) btn.click();
+}
+
+(function () {
+  const btn = document.createElement('button');
+  btn.textContent = 'Design space';
+  btn.onclick = () => {
+    document.querySelectorAll('#tabs button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-matrix').classList.add('active');
+  };
+  tabsEl.appendChild(btn);
+
+  function cell(html, opts) {
+    opts = opts || {};
+    const cls = 'matrix-cell' + (opts.go ? ' clickable' : '') + (opts.status ? ' ' + opts.status : '');
+    const click = opts.go ? `onclick="goToTab('${opts.go}')"` : '';
+    return `<div class="${cls}" ${click}>${html}</div>`;
+  }
+
+  const panel = document.createElement('div');
+  panel.className = 'panel';
+  panel.id = 'panel-matrix';
+  panel.innerHTML = `
+    <p class="desc">Every tab in this demo is one cell of a 2-axis grid, not an
+      unrelated list. <b>Rows</b> = unit type (how the video gets cut).
+      <b>Columns</b> = arrangement (how units from different categories sit in
+      time). Click a cell to jump to its tab. Full writeup:
+      <code>docs/interleave_design_options_2026-09-24_0951.md</code>,
+      "Design-space generalization."</p>
+
+    <div class="matrix">
+      <div class="matrix-cell head"></div>
+      <div class="matrix-cell head">Separate</div>
+      <div class="matrix-cell head">Blocked run</div>
+      <div class="matrix-cell head">Interleaved,<br>fixed pair</div>
+      <div class="matrix-cell head">Interleaved,<br>free pool</div>
+
+      <div class="matrix-cell head">Full video</div>
+      ${cell('<b>Original pilot task</b><br><span class="dim">RUN_freeviewingTraining_movie.m — already built &amp; piloted, not part of exp_01</span>')}
+      ${cell('<span class="dim">not meaningful — just consecutive trials in the original design</span>')}
+      ${cell('<b class="warn">structurally impossible</b><br><span class="dim">can\'t rapid-alternate without cutting the video</span>', {status:'impossible'})}
+      ${cell('<b class="warn">structurally impossible</b><br><span class="dim">same reason</span>', {status:'impossible'})}
+
+      <div class="matrix-cell head">Arbitrary slice</div>
+      ${cell('<span class="dim">not built — low value, no principled boundaries, no partner</span>', {status:'notbuilt'})}
+      ${cell('<span class="dim">not built — easy extension of P4 with fixed-length slices</span>', {status:'notbuilt'})}
+      ${cell('<b>Baseline / Option 1</b><br><span class="dim">today\'s code</span>', {go:'baseline'})}
+      ${cell('<span class="dim">not built — easy extension of Baseline, pool draws instead of 2 fixed clips</span>', {status:'notbuilt'})}
+
+      <div class="matrix-cell head">Natural shot</div>
+      ${cell('<b>P2</b><br><span class="dim">⚠ content-identical to Full video × Separate — a control, not a new design</span>', {go:'p2'})}
+      ${cell('<b>P4</b>', {go:'p4'})}
+      ${cell('<b>Option 4</b>', {go:'opt4'})}
+      ${cell('<b>P1</b> / <b>P3</b> / <b>P5</b><br><span class="dim">free-pool, duration-matched, 3-way chain</span>', {go:'p1'})}
+    </div>
+
+    <p class="desc" style="margin-top:14px;">Two more things vary independently of
+      both axes — modifiers on a cell, not cells of their own: <b>trial-length rule</b>
+      (fixed constant vs. <button class="linklike" onclick="goToTab('opt5')">Option 5</button>'s
+      min(clip A, clip B)), and <b>matching criterion</b> for interleaved cells
+      (none / duration-matched / cut-count-matched — the last one dropped for a
+      population-mismatch problem, see <code>docs/cuts_analysis.md</code>).</p>
+
+    <p class="desc"><b>What the grid makes obvious that a flat list didn't:</b>
+      "PI wants interleaved" already rules out the entire Full-video row — both
+      interleaved cells there aren't just unbuilt, they're impossible. Natural
+      shot is the only row with a meaningful answer in every column. And P2 is a
+      control, not a competing design.</p>
+  `;
+  panelsEl.appendChild(panel);
+})();
 </script>
 
 <style>
+  .matrix { display: grid; grid-template-columns: 110px repeat(4, 1fr); gap: 6px; font-size: 12px; }
+  .matrix-cell { border: 1px solid var(--border); border-radius: 6px; padding: 8px; background: var(--panel); }
+  .matrix-cell.head { background: var(--tab-bg); font-weight: 600; border: none; display: flex; align-items: center; font-size: 12.5px; }
+  .matrix-cell .dim { color: var(--ink-dim); font-size: 11px; }
+  .matrix-cell .warn { color: var(--accent-warn); }
+  .matrix-cell.impossible { background: repeating-linear-gradient(45deg, var(--tab-bg) 0 8px, var(--panel) 8px 16px); }
+  .matrix-cell.notbuilt { opacity: .7; font-style: italic; }
+  .matrix-cell.clickable { cursor: pointer; border-color: var(--accent-a); background: var(--accent-a-dim); transition: transform .1s; }
+  .matrix-cell.clickable:hover { transform: scale(1.02); }
+  .linklike { background: none; border: none; color: var(--accent-a); text-decoration: underline; cursor: pointer; font: inherit; padding: 0; }
+  @media (max-width: 640px) { .matrix { grid-template-columns: 80px repeat(4, minmax(90px,1fr)); overflow-x: auto; font-size: 10.5px; } }
+
   .tbl { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin-bottom: 4px; font-size: 12.5px; }
   .tbl .tr { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--border); }
   .tbl .tr:first-child { border-top: none; }
