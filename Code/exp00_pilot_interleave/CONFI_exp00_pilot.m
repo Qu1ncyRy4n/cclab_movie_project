@@ -50,6 +50,12 @@ switch cclab.computer_name
         cclab.filepath_nas   = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset';
         cclab.filepath_local = 'C:\Users\qmryan\Desktop\Bliss-Moreau_Machado_Videos\video_ebm_dataset';
         cclab.matlab_path = fileparts(fileparts(mfilename('fullpath'))); % .../cclab_movie_project/Code
+        % ScreenNumber=0 = "the full Windows desktop area" spanning ALL
+        % monitors (per PTB's own startup log on a multi-monitor machine),
+        % not necessarily the primary display. If a run seems to launch
+        % with no visible window, try ScreenNumber=1 (usually the primary
+        % monitor specifically) instead — cheap to test, don't over-trust
+        % this as the actual cause without checking.
         cclab.ScreenNumber = 0;
         cclab.screenSize   = [1080 720];
     otherwise

@@ -115,6 +115,37 @@ unsigned local scripts.
 `.\create_desktop_shortcut.ps1` drops a shortcut to this folder on the
 Desktop, so it doesn't need re-navigating each session.
 
+### If MATLAB doesn't open
+
+**Headless config/path check first** — validates `computer_name`
+resolution, `video_all/` presence, and `pilot_pool.csv` parsing with zero
+Psychtoolbox dependency and no display needed at all (MATLAB's `-batch`
+mode, genuinely non-interactive):
+
+```powershell
+.\run_exp00_pilot.bat -DryRun
+```
+
+If that passes but the real run still doesn't show a window, the problem
+is specifically in opening the PTB display — a real experiment window
+can't be headless, since showing stimuli is the whole point, but two
+things are cheap to try before deeper debugging:
+
+1. **Bypass the launcher chain entirely.** Open MATLAB directly (Start
+   Menu, not through PowerShell/`.bat`), then in its Command Window:
+   ```matlab
+   cd('<this folder's path>')
+   RUN_exp00_pilot
+   ```
+   This removes PowerShell, `cmd.exe`, and the `-sd`/`-r` launch flags as
+   possible culprits — if it works here but not via `.bat`, the launcher
+   scripts are the problem, not the experiment.
+2. **Multi-monitor placement.** `ScreenNumber=0` in the `win_dummy` case
+   is "the full Windows desktop area" (per PTB's own startup log on a
+   multi-monitor machine) — the window may be opening somewhere off the
+   visible primary display rather than not opening at all. Try
+   `ScreenNumber=1` in `CONFI_exp00_pilot.m`.
+
 ## Notes from the first real run (2026-09-24, Windows, dummy mode)
 
 Ran successfully end to end (17 of 20 trials before an intentional ESC
