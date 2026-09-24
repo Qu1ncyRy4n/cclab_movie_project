@@ -25,26 +25,34 @@ intentionally ignores almost all of it.
 
 - **8 videos total**, not 600: `video_ebm_dataset/pilot_pool.csv` — 4
   `nature` (`00181DVD`, `00182DVD`, `00189DVD`, `00191DVD`) and 4
-  `social_undir` (`foraging01-04DVD`). `social_directed` is dropped for
-  now. 6 of the 8 are lab-vetted (`pilot_ready=1` in `MANIFEST.csv`);
-  `00191DVD` and `foraging04DVD` are not (`pilot_ready` column in
+  `social_undir` (`foraging02DVD`, `foraging03DVD`, `foraging04DVD`,
+  `foraging06DVD`). `social_directed` is dropped for now. 6 of the 8 are
+  lab-vetted (`pilot_ready=1` in `MANIFEST.csv`); `00191DVD` and
+  `foraging04DVD`/`foraging06DVD` are not (`pilot_ready` column in
   `pilot_pool.csv` itself tracks which) — only programmatically verified
   (right category, right duration, real file) plus a manual frame-grab
-  spot check (2026-09-24), not full lab QC. Started at 2/category (4
-  total) for the very first test; expanded once that worked.
+  spot check, not full lab QC. Started at 2/category (4 total) for the
+  very first test; expanded once that worked.
 - **No de Bruijn balancing, no `buildSequence.m`.** Every trial draws 2
-  videos live, uniformly at random from the 4 — same-category and
+  videos live, uniformly at random from the pool — same-category and
   cross-category pairs both happen, unbalanced. Good enough to get
   something running; revisit if it matters once there's real data.
 - **No per-segment fixation dot.** exp_01's `t_fix_between` is gone —
   once the trial's initial 0.85 s hold passes, the interleave plays
   straight through.
-- **No `min(A,B)` trial-length rule.** Every pool video is >=7.0 s
-  (`durations.csv`), so "6 s of each clip from t=0" is always safe with
-  margin — the whole point of the >=6s filter mentioned in the spec turned
-  out to be a no-op against this dataset (nothing in nature/social_undir is
-  under 7s), which is worth knowing before assuming the filter is doing
-  real work.
+- **Each clip plays from its own natural-shot start, not always t=0.**
+  This was wrong in an earlier version of this pilot: "every pool video is
+  >=7s, so 6s from t=0 is always safe" turned out to be false in practice —
+  `00189DVD` has a real cut at 4.14s (inside the displayed window), and
+  `foraging01DVD` (the original 4th `social_undir` pick) has *no*
+  continuous shot >=6s anywhere in it, cuts every ~5.0s throughout, so it
+  was dropped from the pool entirely rather than patched. `pilot_pool.csv`
+  now has `start_s`/`shot_dur_s` columns — each video's offset into a real,
+  cut-verified natural shot from `cuts.csv` that's >=6s long — and playback
+  seeks there instead of assuming t=0 is clean. No physical file splitting;
+  this is exactly "Option 4 / natural shot" from
+  `docs/interleave_design_options_2026-09-24_0951.md`, applied here as
+  lightweight per-row metadata rather than a separate `shots.csv`.
 - **One row per trial**, not per segment (`Results` table). Per-segment
   `SegOn_/SegOff_` EyeLink messages still go to the EDF if finer timing is
   ever needed.

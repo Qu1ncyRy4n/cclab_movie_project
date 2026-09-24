@@ -44,6 +44,8 @@ def load_pool(cfg: Config) -> list[dict]:
         rows = list(csv.DictReader(f))
     for r in rows:
         r["duration_s"] = float(r["duration_s"])
+        r["start_s"] = float(r["start_s"])
+        r["shot_dur_s"] = float(r["shot_dur_s"])
     if len(rows) < 2:
         raise ValueError(f"Pool file {pool_path} has fewer than 2 videos.")
     return rows
@@ -155,12 +157,16 @@ def run_trial(
           f"same-category={same_category}")
 
     aborted = False
+    start_a = pool_by_name[name_a]["start_s"]
+    start_b = pool_by_name[name_b]["start_s"]
     for si in range(cfg.segs_per_clip):
-        seg_start = si * cfg.seg_dur
-        if play_segment(win, movies[name_a], seg_start, cfg.seg_dur):
+        # Offset from each clip's OWN natural-shot start (pilot_pool.csv
+        # start_s), not always t=0 — some pool videos have a real cut
+        # before 6s in, so t=0 isn't always a safe/clean window.
+        if play_segment(win, movies[name_a], start_a + si * cfg.seg_dur, cfg.seg_dur):
             aborted = True
             break
-        if play_segment(win, movies[name_b], seg_start, cfg.seg_dur):
+        if play_segment(win, movies[name_b], start_b + si * cfg.seg_dur, cfg.seg_dur):
             aborted = True
             break
 
@@ -219,7 +225,8 @@ def main():
     times_shown = {name: 0 for name in pool_by_name}
     print(f"\n--- exp_00 pilot pool ({len(pool_rows)} videos) ---")
     for r in pool_rows:
-        print(f"  {r['filename']:<20s} {r['category']:<14s} {r['duration_s']:5.1f}s")
+        print(f"  {r['filename']:<20s} {r['category']:<14s} starts at "
+              f"{r['start_s']:4.2f}s (natural shot, {r['shot_dur_s']:.1f}s long)")
     print(f"segDur={cfg.seg_dur}s, perClipSeconds={cfg.per_clip_seconds}s "
           f"({cfg.segs_per_clip} segments/clip), nTrials={cfg.n_trials}\n")
 

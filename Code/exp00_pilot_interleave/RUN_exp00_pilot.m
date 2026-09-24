@@ -129,7 +129,8 @@ try
     nPool = height(poolT);
     fprintf('\n--- exp_00 pilot pool (%d videos) ---\n', nPool);
     for i = 1:nPool
-        fprintf('  %-20s %-14s %5.1fs\n', poolT.filename(i), poolT.category(i), poolT.duration_s(i));
+        fprintf('  %-20s %-14s starts at %4.2fs (natural shot, %.1fs long)\n', ...
+            poolT.filename(i), poolT.category(i), poolT.start_s(i), poolT.shot_dur_s(i));
     end
     fprintf('segDur=%gs, perClipSeconds=%gs (%d segments/clip), nTrials=%d\n\n', ...
         cclab.segDur, cclab.perClipSeconds, cclab.segsPerClip, cclab.nTrials);
@@ -150,6 +151,7 @@ try
         m.ptr      = movie;
         m.rect     = [leftX, 0, leftX + newWidth, screenYpixels];
         m.category = char(poolT.category(i));
+        m.startS   = poolT.start_s(i);
         movieMap(fn)   = m;
         timesShown(fn) = 0;
     end
@@ -340,11 +342,17 @@ try
 
                 aborted = false;
                 for si = 1:cclab.segsPerClip
-                    segStart = (si - 1) * cclab.segDur;
-                    aborted = playOneSegment(window, mA, segStart, cclab.segDur, ...
+                    % Offset from each clip's OWN natural-shot start
+                    % (pilot_pool.csv start_s), not always t=0 — some pool
+                    % videos have a real cut before 6s in (see
+                    % pilot_pool.csv/README for 00189DVD), so t=0 isn't
+                    % always a safe/clean window.
+                    segStartA = mA.startS + (si - 1) * cclab.segDur;
+                    segStartB = mB.startS + (si - 1) * cclab.segDur;
+                    aborted = playOneSegment(window, mA, segStartA, cclab.segDur, ...
                         total_trials, si, 'A', useRealEyelink, escKey);
                     if aborted, break; end
-                    aborted = playOneSegment(window, mB, segStart, cclab.segDur, ...
+                    aborted = playOneSegment(window, mB, segStartB, cclab.segDur, ...
                         total_trials, si, 'B', useRealEyelink, escKey);
                     if aborted, break; end
                 end
