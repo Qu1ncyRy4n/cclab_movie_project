@@ -11,10 +11,14 @@ intentionally ignores almost all of it.
 ```
 1. Startup
 2. Trial:
-   a. Fixation dot — hold 0.85 s to proceed
+   a. Fixation dot — waits indefinitely (no timeout), hold 0.85 s once
+      acquired to proceed. Broken during the hold -> back to waiting,
+      not an aborted trial. Only the experimenter (ESC) ends things
+      without a completed fixation.
    b. Pick 2 DISTINCT videos at random (same or different category —
       not controlled), interleave A/B/A/B... at segDur seconds each,
-      6 s of each clip total, from t=0
+      6 s of each clip total, from that clip's own natural-shot start
+      (pilot_pool.csv start_s — not always t=0)
    c. Unconditional reward
    d. ITI — blank, 2 s (or 3 s)
    e. repeat from 2a until nTrials
@@ -40,6 +44,15 @@ intentionally ignores almost all of it.
 - **No per-segment fixation dot.** exp_01's `t_fix_between` is gone —
   once the trial's initial 0.85 s hold passes, the interleave plays
   straight through.
+- **Fixation acquisition has no timeout, by design.** Originally had a 5s
+  `t_waitfixation_fp` limit (copied from exp_01's pattern) that would
+  silently abort the trial and cycle to a new one if fixation wasn't
+  acquired in time. Removed: the dot now waits indefinitely, and a broken
+  hold goes back to waiting rather than aborting — a trial only ends
+  without a completed fixation if the experimenter presses ESC, which
+  ends the whole session, not just that trial. `AbortPhase` in `Results`
+  can now only be `"None"` or `"Select_and_play"` (aborted mid-interleave)
+  — the old `"Wait_for_fixation"`/`"Hold_fix"` abort values are gone.
 - **Each clip plays from its own natural-shot start, not always t=0.**
   This was wrong in an earlier version of this pilot: "every pool video is
   >=7s, so 6s from t=0 is always safe" turned out to be false in practice —

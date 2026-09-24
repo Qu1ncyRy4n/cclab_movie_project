@@ -58,7 +58,6 @@ try
     screenNumber  = cclab.ScreenNumber;
     SkipSync      = cclab.SkipSyncTests;
 
-    t_waitfix = cclab.durations.t_waitfixation_fp;
     t_holdfix = cclab.durations.t_fixation_fp;
     t_ITI     = cclab.durations.t_trialend;
     t_reward  = cclab.durations.t_reward;
@@ -300,6 +299,10 @@ try
 
             % -----------------------------------------------------------------
             case "Wait_for_fixation"
+                % No timeout — the dot waits as long as it takes. The only
+                % way out of this state besides acquiring fixation is the
+                % experimenter pressing ESC (checked at the top of this
+                % loop, every iteration, regardless of state).
                 inFix = checkFixation(useRealEyelink, window, fp_x_px, fp_y_px, ...
                     fixWin_px, centerX, centerY, eyeUsed);
 
@@ -307,21 +310,18 @@ try
                     if useRealEyelink, Eyelink('Message', 'FixInFP_%d', total_trials); end
                     trial_start_time_hold = GetSecs;
                     state = "Hold_fix";
-                elseif (GetSecs - trial_start_time) > t_waitfix
-                    fprintf('\tFailed to acquire fixation.\n');
-                    abortPhase = "Wait_for_fixation";
-                    state = "ITI";
                 end
 
             % -----------------------------------------------------------------
             case "Hold_fix"
+                % Breaking fixation during the hold does NOT abort the
+                % trial — it goes back to waiting and tries again,
+                % indefinitely, same as Wait_for_fixation above.
                 inFix = checkFixation(useRealEyelink, window, fp_x_px, fp_y_px, ...
                     fixWin_px, centerX, centerY, eyeUsed);
 
                 if ~inFix
-                    fprintf('\tBroke fixation.\n');
-                    abortPhase = "Hold_fix";
-                    state = "ITI";
+                    state = "Wait_for_fixation";
                 elseif (GetSecs - trial_start_time_hold) >= t_holdfix
                     fixAcquiredMs = 1000 * (GetSecs - trial_start_time);
                     state = "Select_and_play";
@@ -402,29 +402,27 @@ try
                 Screen('Flip', window);
                 WaitSecs(t_ITI);
 
-                if abortPhase == "None" || abortPhase == "Select_and_play"
-                    % Report the count as it stood BEFORE this trial, so it
-                    % answers "how familiar was this pairing going in." Only
-                    % a completed trial (abortPhase=="None") already bumped
-                    % timesShown, in the Reward state — subtract that back out.
-                    if abortPhase == "None"
-                        tsA = timesShown(nameA) - 1;
-                        tsB = timesShown(nameB) - 1;
-                    else
-                        tsA = timesShown(nameA);
-                        tsB = timesShown(nameB);
-                    end
-                    row = { total_trials, string(nameA), string(mA.category), ...
-                            string(nameB), string(mB.category), double(sameCategory), ...
-                            cclab.segDur, tsA, tsB, ...
-                            fixAcquiredMs, interleaveOffMs, rewardOnMs, abortPhase, ...
-                            double(abortPhase == "None"), rAmount };
+                % ITI is only ever reached after Select_and_play now (no
+                % more fixation-timeout abort path), so abortPhase here is
+                % always "None" or "Select_and_play" — a video pair was
+                % always picked by this point.
+                %
+                % Report timesShown as it stood BEFORE this trial, so it
+                % answers "how familiar was this pairing going in." Only a
+                % completed trial (abortPhase=="None") already bumped
+                % timesShown, in the Reward state — subtract that back out.
+                if abortPhase == "None"
+                    tsA = timesShown(nameA) - 1;
+                    tsB = timesShown(nameB) - 1;
                 else
-                    row = { total_trials, "", "", "", "", NaN, ...
-                            cclab.segDur, NaN, NaN, ...
-                            fixAcquiredMs, interleaveOffMs, rewardOnMs, abortPhase, ...
-                            0, 0 };
+                    tsA = timesShown(nameA);
+                    tsB = timesShown(nameB);
                 end
+                row = { total_trials, string(nameA), string(mA.category), ...
+                        string(nameB), string(mB.category), double(sameCategory), ...
+                        cclab.segDur, tsA, tsB, ...
+                        fixAcquiredMs, interleaveOffMs, rewardOnMs, abortPhase, ...
+                        double(abortPhase == "None"), rAmount };
                 Results(end+1, :) = row; %#ok<AGROW>
                 save(outMat, 'Results', 'cclab');
 

@@ -108,7 +108,10 @@ cclab.segsPerClip = cclab.perClipSeconds / cclab.segDur;
 cclab.nTrials = 20;
 
 %% Timing (seconds)
-cclab.durations.t_waitfixation_fp = 5;    % max time to acquire fixation
+% No t_waitfixation_fp / acquisition timeout by design — the fixation dot
+% waits indefinitely for fixation to be acquired and held; the only way to
+% end a trial without a completed fixation is the experimenter pressing
+% ESC (quits the whole session, doesn't just skip one trial).
 cclab.durations.t_fixation_fp     = 0.85; % required hold before interleave starts
 cclab.durations.t_trialend        = 2;    % ITI (blank). 2 or 3 — exploratory, see segDur.
 cclab.durations.t_reward          = 1;    % reward image on screen

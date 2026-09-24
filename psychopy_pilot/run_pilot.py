@@ -3,11 +3,15 @@
 Same design as Code/exp00_pilot_interleave/RUN_exp00_pilot.m, built in
 parallel as a stack comparison — not a replacement. Per trial:
 
-  a. fixation dot, hold config.t_hold_fixation (0.85s default) to proceed
-  b. pick 2 DISTINCT videos at random from the 4-video pool
+  a. fixation dot — waits indefinitely (no timeout), holds
+     config.t_hold_fixation (0.85s default) once acquired to proceed. A
+     break during the hold goes back to waiting, not to an aborted trial.
+     Only the experimenter (ESC) ends things without a completed fixation.
+  b. pick 2 DISTINCT videos at random from the pool
      (video_ebm_dataset/pilot_pool.csv), interleave A/B/A/B... at
      config.seg_dur seconds each, config.per_clip_seconds of each clip
-     total, from t=0
+     total, from that video's own natural-shot start_s (not always t=0 —
+     see pilot_pool.csv)
   c. unconditional reward (on-screen only — no DIO/pump wired up, see
      README "Known gaps")
   d. ITI — blank, config.t_iti
@@ -57,6 +61,12 @@ def compute_ppd(win: visual.Window, cfg: Config) -> float:
     return 2 * cfg.obs_dist_cm * ppcm * math.tan(math.pi / 360)
 
 
+class QuitRequested(Exception):
+    """Raised when the experimenter presses ESC during an indefinite wait
+    (fixation acquisition/hold have no timeout — see
+    acquire_and_hold_fixation)."""
+
+
 def check_fixation(mouse: event.Mouse, fix_win_px: float) -> bool:
     """Dummy mode: mouse position stands in for gaze, same as MATLAB's
     dummymode. Window units='pix', origin at screen center, so this is
@@ -66,22 +76,30 @@ def check_fixation(mouse: event.Mouse, fix_win_px: float) -> bool:
     return abs(x) <= fix_win_px / 2 and abs(y) <= fix_win_px / 2
 
 
-def wait_for_fixation(mouse: event.Mouse, fix_win_px: float, timeout: float) -> bool:
-    clock = core.Clock()
-    while clock.getTime() < timeout:
-        if check_fixation(mouse, fix_win_px):
-            return True
-        core.wait(0.005)
-    return False
+def acquire_and_hold_fixation(mouse: event.Mouse, fix_win_px: float, hold_dur: float) -> None:
+    """Waits for fixation, then holds it for hold_dur. No timeout on
+    either step — if fixation breaks during the hold, goes back to
+    waiting and tries again, indefinitely. The only way out besides
+    success is the experimenter pressing ESC (raises QuitRequested,
+    ending the whole session — not just this trial). Mirrors
+    RUN_exp00_pilot.m's Wait_for_fixation/Hold_fix states exactly."""
+    while True:
+        while not check_fixation(mouse, fix_win_px):
+            if event.getKeys(["escape"]):
+                raise QuitRequested()
+            core.wait(0.005)
 
-
-def hold_fixation(mouse: event.Mouse, fix_win_px: float, hold_dur: float) -> bool:
-    clock = core.Clock()
-    while clock.getTime() < hold_dur:
-        if not check_fixation(mouse, fix_win_px):
-            return False
-        core.wait(0.005)
-    return True
+        hold_clock = core.Clock()
+        broke = False
+        while hold_clock.getTime() < hold_dur:
+            if event.getKeys(["escape"]):
+                raise QuitRequested()
+            if not check_fixation(mouse, fix_win_px):
+                broke = True
+                break
+            core.wait(0.005)
+        if not broke:
+            return
 
 
 def play_segment(win: visual.Window, movie: visual.MovieStim, seg_start: float, seg_dur: float) -> bool:
@@ -134,19 +152,11 @@ def run_trial(
     }
     trial_clock = core.Clock()
 
-    # a. fixation
+    # a. fixation — waits indefinitely; QuitRequested (ESC) propagates up
+    # to main(), ending the session rather than just this trial.
     fix_dot.draw()
     win.flip()
-    if not wait_for_fixation(mouse, fix_win_px, cfg.t_wait_fixation):
-        print("\tFailed to acquire fixation.")
-        row["AbortPhase"] = "Wait_for_fixation"
-        core.wait(cfg.t_iti)
-        return row
-    if not hold_fixation(mouse, fix_win_px, cfg.t_hold_fixation):
-        print("\tBroke fixation.")
-        row["AbortPhase"] = "Hold_fix"
-        core.wait(cfg.t_iti)
-        return row
+    acquire_and_hold_fixation(mouse, fix_win_px, cfg.t_hold_fixation)
     row["FixAcquired_ms"] = trial_clock.getTime() * 1000
 
     # b. select + interleave
@@ -270,14 +280,20 @@ def main():
             writer.writeheader()
 
             for trial_num in range(1, cfg.n_trials + 1):
-                if event.getKeys(["escape"]):
-                    print("ESC pressed, quitting.")
-                    break
                 total_trials += 1
                 print(f"\n=== Trial #{total_trials} of {cfg.n_trials} "
                       f"(success so far={total_success}) ===")
-                row = run_trial(win, total_trials, movies, pool_by_name,
-                                 times_shown, cfg, mouse, fix_dot, reward_text, ppd)
+                try:
+                    row = run_trial(win, total_trials, movies, pool_by_name,
+                                     times_shown, cfg, mouse, fix_dot, reward_text, ppd)
+                except QuitRequested:
+                    # ESC during an indefinite fixation wait — ends the
+                    # whole session, same as RUN_exp00_pilot.m. No row for
+                    # this in-progress attempt, matching the MATLAB side
+                    # (no video had been picked yet at this point either).
+                    print("ESC pressed, quitting.")
+                    total_trials -= 1
+                    break
                 total_success += row["TrialSuccess"]
                 writer.writerow(row)
                 f.flush()

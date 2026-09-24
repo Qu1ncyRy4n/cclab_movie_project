@@ -34,7 +34,9 @@ class Config:
     n_trials: int = 20
 
     # --- timing (s) ---
-    t_wait_fixation: float = 5.0    # max time to acquire fixation
+    # No fixation-acquisition timeout by design — see
+    # acquire_and_hold_fixation() in run_pilot.py. The dot waits
+    # indefinitely; only the experimenter (ESC) ends a trial without one.
     t_hold_fixation: float = 0.85   # required hold before interleave starts
     t_iti: float = 2.0              # blank ITI — try 2 or 3
     t_reward: float = 1.0           # reward image on screen
