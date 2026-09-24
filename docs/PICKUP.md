@@ -29,10 +29,17 @@ But real data collection is starting from something much smaller first:
   to settle any of them without first seeing real behavior. This pilot logs
   `TimesShownBeforeA/B` for future familiarity analysis but doesn't control
   for it yet.
-- **Next**: test `exp_00` from a Windows machine in dummy mode (mouse, no
-  EyeLink) — see `Code/exp00_pilot_interleave/README.md`'s Windows section
-  for the `computer_name = 'win_dummy'` config case and the `.ps1`/`.bat`
-  launcher scripts.
+- **First real run: done, 2026-09-24, Windows dummy mode — worked.** Ran
+  end to end (fixation, interleave, reward, ITI, correct aborts and
+  completions logged). Three cosmetic/known-issue warnings encountered,
+  none blocking — see "Notes from the first real run" in
+  `Code/exp00_pilot_interleave/README.md`. Pool expanded from 2 to 4
+  videos/category and `nTrials` halved (40→20) afterward to control
+  per-video repetition as the pool grew — same README.
+- **Next**: PsychoPy side hasn't been run yet (still template-only, see
+  `psychopy_pilot/README.md`'s Known gaps). Real EyeLink/reward-hardware
+  integration still needed on both stacks before this moves past
+  dummy-mode testing.
 
 ---
 

@@ -1,5 +1,9 @@
-filename,category,duration_s
-00181DVD.mp4,nature,30.030
-00182DVD.mp4,nature,30.097
-foraging01DVD.mp4,social_undir,30.030
-foraging02DVD.mp4,social_undir,29.997
+filename,category,duration_s,pilot_ready
+00181DVD.mp4,nature,30.030,1
+00182DVD.mp4,nature,30.097,1
+00189DVD.mp4,nature,30.097,1
+00191DVD.mp4,nature,29.930,0
+foraging01DVD.mp4,social_undir,30.030,1
+foraging02DVD.mp4,social_undir,29.997,1
+foraging03DVD.mp4,social_undir,30.030,1
+foraging04DVD.mp4,social_undir,30.016,0

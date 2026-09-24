@@ -23,10 +23,15 @@ intentionally ignores almost all of it.
 
 ## Why this is so much smaller than exp_01
 
-- **4 videos total**, not 600: `video_ebm_dataset/pilot_pool.csv` —
-  `00181DVD`, `00182DVD` (nature) and `foraging01DVD`, `foraging02DVD`
-  (social_undir), all already hand-vetted (`pilot_ready=1` in
-  `MANIFEST.csv`). `social_directed` is dropped for now.
+- **8 videos total**, not 600: `video_ebm_dataset/pilot_pool.csv` — 4
+  `nature` (`00181DVD`, `00182DVD`, `00189DVD`, `00191DVD`) and 4
+  `social_undir` (`foraging01-04DVD`). `social_directed` is dropped for
+  now. 6 of the 8 are lab-vetted (`pilot_ready=1` in `MANIFEST.csv`);
+  `00191DVD` and `foraging04DVD` are not (`pilot_ready` column in
+  `pilot_pool.csv` itself tracks which) — only programmatically verified
+  (right category, right duration, real file) plus a manual frame-grab
+  spot check (2026-09-24), not full lab QC. Started at 2/category (4
+  total) for the very first test; expanded once that worked.
 - **No de Bruijn balancing, no `buildSequence.m`.** Every trial draws 2
   videos live, uniformly at random from the 4 — same-category and
   cross-category pairs both happen, unbalanced. Good enough to get
@@ -56,7 +61,12 @@ without having to control for them now.
 
 - `segDur` — 2 or 3 s. Both worth a look; not a settled choice.
 - `durations.t_trialend` — ITI, 2 or 3 s.
-- `nTrials` — currently 40, arbitrary.
+- `nTrials` — currently 20. Was 40 at 2 videos/category; halved when the
+  pool doubled to 4/category (2026-09-24) to hold per-video repetition
+  roughly constant. Rough math: expected times-shown-per-video ≈
+  (2 × trials-completed) / pool-size — e.g. 20 trials at ~70% completion
+  ≈ 14 successes ≈ 3.5×/video across an 8-video pool, vs. ~14×/video at
+  the original 40-trials/4-video settings.
 
 ## Running it
 
@@ -89,18 +99,56 @@ your distro name with `$env:WSL_DISTRO_NAME` if unsure (it's `NixOS` on
 this dev machine). Running MATLAB against files over that bridge works;
 just don't expect NTFS-native speed for anything I/O-heavy.
 
+**Default PowerShell script-execution policy blocks `.ps1` files directly**
+on most machines (`UnauthorizedAccess` / `PSSecurityException` — confirmed
+2026-09-24). Use the `.bat` wrapper as the primary path, not a fallback:
+
 ```powershell
 cd Code\exp00_pilot_interleave
-.\run_exp00_pilot.ps1          # finds matlab.exe on PATH and launches it;
-                                # prints manual instructions if not found
+.\run_exp00_pilot.bat          # bypasses the execution policy for just
+                                # this run; finds matlab.exe and launches it
 ```
 
-If PowerShell blocks the script (unsigned-script policy), double-click
-`run_exp00_pilot.bat` instead — it bypasses the policy for just that one
-run, not system-wide.
+Only try `.\run_exp00_pilot.ps1` directly if your machine already allows
+unsigned local scripts.
 
 `.\create_desktop_shortcut.ps1` drops a shortcut to this folder on the
 Desktop, so it doesn't need re-navigating each session.
+
+## Notes from the first real run (2026-09-24, Windows, dummy mode)
+
+Ran successfully end to end (17 of 20 trials before an intentional ESC
+quit; several correct fixation-break aborts, several correct completions
+with reward). A few things worth knowing if you see them again:
+
+- **`cmd.exe` prints "UNC paths are not supported. Defaulting to Windows
+  directory."`** when the repo is reached via `\\wsl.localhost\...` — this
+  is cosmetic. `run_exp00_pilot.ps1` computes its own paths from
+  `$PSScriptRoot`, independent of `cmd`'s current directory, so MATLAB
+  still launched from the right place despite the warning. The `.bat` now
+  does `pushd` instead of relying on an implicit UNC cwd, which should
+  quiet the message going forward.
+- **`Warning: Name is nonexistent or not a directory: Q:\home\qix\...`**
+  at MATLAB startup — stale, from a previous session's `addpath` (likely
+  `exp_01`'s `dev_wsl` case, once run against a mapped `Q:` drive) that
+  got saved into MATLAB's persistent path. Harmless; doesn't block this
+  script. Clean up with `pathtool` if it bothers you.
+- **`PTB-ERROR: ... impossible stimulus onset value ...` on `Screen('Flip')`**
+  — this is the same Windows-DWM-compositor beamposition-timestamping issue
+  already tracked as unresolved for `lab_120`/`lab_121` in the main
+  `README.md`'s Open Issues and `exp_01_spec.md`'s Still Open #7. Now
+  confirmed to reproduce here too, not lab-rig-specific. Non-blocking for
+  dummy-mode behavioral testing (the trial continued normally after the
+  printed error) — matters for real stimulus-onset timing precision on the
+  actual rig, not for this proof-of-stack pass.
+- **A perceived "missed cut" in `foraging02DVD`** turned out not to be one
+  — `cuts.csv` shows its one real cut at 14.98s, well outside the 0-6s
+  window this pilot actually plays. Pulled frames at 2.5/3.0/3.5s directly
+  (`ffmpeg -ss ... -frames:v 1`) and confirmed smooth, continuous footage
+  in that window. Most likely explanation: the A/B interleave switch itself
+  landed while `foraging02DVD` was on screen and read as an internal cut.
+  If it happens again, note the wall-clock trial time so the exact
+  clip/segment can be identified from the log instead of guessed at.
 
 ## Companion
 

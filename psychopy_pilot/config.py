@@ -29,7 +29,9 @@ class Config:
     # --- exp_00 design (same as CONFI_exp00_pilot.m) ---
     seg_dur: float = 2.0            # interleave chunk length (s) — try 2 or 3
     per_clip_seconds: float = 6.0   # total per-clip screen time (s), from t=0
-    n_trials: int = 40
+    # Halved (from 40) when the pool went from 2 to 4 videos/category
+    # (2026-09-24), to keep per-video repetition roughly constant.
+    n_trials: int = 20
 
     # --- timing (s) ---
     t_wait_fixation: float = 5.0    # max time to acquire fixation

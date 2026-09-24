@@ -96,8 +96,10 @@ if mod(cclab.perClipSeconds, cclab.segDur) ~= 0
 end
 cclab.segsPerClip = cclab.perClipSeconds / cclab.segDur;
 
-% Number of trials in the session.
-cclab.nTrials = 40;
+% Number of trials in the session. Halved (from 40) when the pool went
+% from 2 to 4 videos/category (2026-09-24), to keep per-video repetition
+% roughly constant (~3-4x/video instead of climbing to ~14x/video).
+cclab.nTrials = 20;
 
 %% Timing (seconds)
 cclab.durations.t_waitfixation_fp = 5;    % max time to acquire fixation
