@@ -15,7 +15,7 @@ New-Item -ItemType Directory -Force -Path $InstallRoot | Out-Null
 foreach ($name in @('cclab_movie_project', 'mat_vs_py_bench')) {
     $source = Join-Path $packageRoot $name
     $target = Join-Path $InstallRoot $name
-    & robocopy $source $target /E /Z /R:3 /W:5 /XD .git .venv __pycache__ data results Output_exp00_pilot Output_exp01_transitions Output_freeviewingTraining /XF .DS_Store
+    & robocopy $source $target /E /Z /R:3 /W:5 /XD .git .venv .direnv __pycache__ data results Output_exp00_pilot Output_exp01_transitions Output_freeviewingTraining /XF .DS_Store
     if ($LASTEXITCODE -gt 7) { throw "Install of $name failed with robocopy exit code $LASTEXITCODE." }
 }
 

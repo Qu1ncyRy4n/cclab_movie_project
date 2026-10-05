@@ -8,9 +8,9 @@ folder is copied to a NAS or USB destination without deleting the local source.
 #>
 [CmdletBinding()]
 param(
-    [string]$BenchRoot = (Join-Path $PSScriptRoot '..\mat_vs_py_bench'),
-    [string]$RigConfig = (Join-Path $PSScriptRoot 'Code\cclab-matlab-tools\cfg\rig-right.txt'),
-    [string]$RunRoot = (Join-Path (Split-Path $PSScriptRoot -Parent) 'data\runs'),
+    [string]$BenchRoot,
+    [string]$RigConfig,
+    [string]$RunRoot,
     [string]$ArchiveRoot,
     [ValidateSet('local', 'nas')]
     [string]$VideoSource = 'local',
@@ -31,6 +31,13 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $script:Completed = $false
+
+# Windows PowerShell 5.1 leaves $PSScriptRoot empty while evaluating param()
+# defaults under `powershell.exe -File`, so path defaults are resolved here.
+$scriptRoot = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+if (-not $BenchRoot) { $BenchRoot = Join-Path $scriptRoot '..\mat_vs_py_bench' }
+if (-not $RigConfig) { $RigConfig = Join-Path $scriptRoot 'Code\cclab-matlab-tools\cfg\rig-right.txt' }
+if (-not $RunRoot) { $RunRoot = Join-Path (Split-Path $scriptRoot -Parent) 'data\runs' }
 
 function Require-Path([string]$Path, [string]$Description) {
     if (-not (Test-Path -LiteralPath $Path)) {
@@ -81,10 +88,10 @@ function Get-OrInstall-UV {
     return $uvCommand
 }
 
-Require-Path $PSScriptRoot 'Movie-project repository'
+Require-Path $scriptRoot 'Movie-project repository'
 Require-Path $BenchRoot 'Benchmark repository'
-Require-Path (Join-Path $PSScriptRoot 'Code\exp00_pilot_interleave\RUN_exp00_pilot.m') 'exp_00 MATLAB entry point'
-Require-Path (Join-Path $PSScriptRoot 'Code\cclab-matlab-tools\cclabInitDIO.m') 'cclab MATLAB tools'
+Require-Path (Join-Path $scriptRoot 'Code\exp00_pilot_interleave\RUN_exp00_pilot.m') 'exp_00 MATLAB entry point'
+Require-Path (Join-Path $scriptRoot 'Code\cclab-matlab-tools\cclabInitDIO.m') 'cclab MATLAB tools'
 
 if ($DryRun -and $RunExperiment) {
     throw '-DryRun only validates the exp_00 configuration and videos. Do not combine it with -RunExperiment.'
@@ -105,7 +112,7 @@ if (-not $matlab) {
     throw 'MATLAB is not on PATH. Add MATLAB\bin to PATH, then run this script again.'
 }
 
-$movieRoot = (Resolve-Path -LiteralPath $PSScriptRoot)
+$movieRoot = (Resolve-Path -LiteralPath $scriptRoot)
 $benchRoot = (Resolve-Path -LiteralPath $BenchRoot)
 $runDir = Join-Path $RunRoot $SessionId
 if (Test-Path -LiteralPath $runDir) {

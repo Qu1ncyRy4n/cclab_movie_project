@@ -59,24 +59,27 @@ contain `cclab_movie_project`, `mat_vs_py_bench`, `Install-CCLabRig.ps1`, and
 ### Optional lab-computer smoke test
 
 If MATLAB and the NAS videos are reachable from the lab computer, install the
-package to a disposable local folder, then run the headless check. It opens no
-PTB window, does not need the EyeLink or NI card, and verifies the experiment
-configuration, pilot pool, and all eight pilot video files.
+package to a disposable folder on the Desktop, then run the headless check. It
+opens no PTB window, does not need the EyeLink or NI card, and verifies the
+experiment configuration, pilot pool, and all eight pilot video files.
+`GetFolderPath('Desktop')` resolves the real Desktop even when it is redirected
+into OneDrive.
 
 ```powershell
 $Package = "\\cns-nas.ucdavis.edu\cclab\shared\experiment_packages\exp00_2026-10-05"
+$TestRoot = Join-Path ([Environment]::GetFolderPath('Desktop')) 'CCLabRigTest'
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$Package\Install-CCLabRig.ps1" `
-  -InstallRoot C:\CCLabRigTest
+  -InstallRoot $TestRoot
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\CCLabRigTest\cclab_movie_project\run_rig.ps1" `
-  -BenchRoot "C:\CCLabRigTest\mat_vs_py_bench" `
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$TestRoot\cclab_movie_project\run_rig.ps1" `
+  -BenchRoot "$TestRoot\mat_vs_py_bench" `
   -ComputerProfile win_dummy `
   -VideoSource nas `
   -VideoRoot "\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset" `
   -DryRun
 ```
 
-Expected final line: `DRY RUN OK: ... (8 videos)`. Delete `C:\CCLabRigTest`
+Expected final line: `DRY RUN OK: ... (8 videos)`. Delete the Desktop `CCLabRigTest`
 afterward if it was only used for this check.
 
 ## 2. Install and run on the experiment computer (Windows only)

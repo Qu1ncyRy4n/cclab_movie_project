@@ -21,7 +21,7 @@ function Require-Path([string]$Path, [string]$Description) {
 
 function Copy-Tree([string]$Source, [string]$Target) {
     New-Item -ItemType Directory -Force -Path $Target | Out-Null
-    & robocopy $Source $Target /E /Z /R:3 /W:5 /XD .git .venv __pycache__ data results Output_exp00_pilot Output_exp01_transitions Output_freeviewingTraining /XF .DS_Store
+    & robocopy $Source $Target /E /Z /R:3 /W:5 /XD .git .venv .direnv __pycache__ data results Output_exp00_pilot Output_exp01_transitions Output_freeviewingTraining /XF .DS_Store
     if ($LASTEXITCODE -gt 7) { throw "Copy from $Source failed with robocopy exit code $LASTEXITCODE." }
 }
 
