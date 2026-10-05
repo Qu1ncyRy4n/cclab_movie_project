@@ -18,7 +18,7 @@ param(
     [string]$SessionId = (Get-Date -Format 'yyyy-MM-dd_HHmmss'),
     [ValidatePattern('^[A-Za-z0-9_]{1,8}$')]
     [string]$SubjectId,
-    [int]$Screen = 2,
+    [int]$Screen = -1,
     [int]$Frames = 3000,
     [int]$Pulses = 10000,
     [int]$Flips = 300,
@@ -36,7 +36,12 @@ $script:Completed = $false
 # defaults under `powershell.exe -File`, so path defaults are resolved here.
 $scriptRoot = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
 if (-not $BenchRoot) { $BenchRoot = Join-Path $scriptRoot '..\mat_vs_py_bench' }
-if (-not $RigConfig) { $RigConfig = Join-Path $scriptRoot 'Code\cclab-matlab-tools\cfg\rig-right.txt' }
+# win_dummy/dev_wsl have no NI card, photodiode, or stimulus display, so the
+# benchmarks run on synthetic DIO and the MATLAB T2 (no dummy mode) is skipped.
+$benchDummy = $ComputerProfile -in @('win_dummy', 'dev_wsl')
+$defaultRig = if ($benchDummy) { 'dummy.txt' } else { 'rig-right.txt' }
+if (-not $RigConfig) { $RigConfig = Join-Path $scriptRoot "Code\cclab-matlab-tools\cfg\$defaultRig" }
+if ($Screen -lt 0) { $Screen = if ($benchDummy) { 0 } else { 2 } }
 if (-not $RunRoot) { $RunRoot = Join-Path (Split-Path $scriptRoot -Parent) 'data\runs' }
 
 function Require-Path([string]$Path, [string]$Description) {
@@ -146,6 +151,7 @@ try {
         started_local = (Get-Date).ToString('o')
         computer_name = $env:COMPUTERNAME
         computer_profile = $ComputerProfile
+        bench_dummy = $benchDummy
         video_source = $VideoSource
         screen = $Screen
         movie_project = $movieRoot.Path
@@ -169,18 +175,32 @@ try {
     }
 
     if (-not $DryRun -and -not $SkipBench) {
+        if ($benchDummy) {
+            Write-Host "`nBenchmarks run in DUMMY mode (synthetic DIO/photodiode). Results are not timing measurements." -ForegroundColor Yellow
+        }
+        $preflightArgs = @()
+        $dummyArgs = @()
+        if ($benchDummy) {
+            $preflightArgs = @('--off-rig')
+            $dummyArgs = @('--dummy')
+        }
         Push-Location $benchRoot
         try {
             Invoke-Checked 'Install Python benchmark dependencies' { & $uv.Source sync --extra rig --extra plot }
-            Invoke-Checked 'Python rig preflight' { & $uv.Source run python preflight.py --config $env:CCLAB_RIG_CONFIG }
-            Invoke-Checked 'Python T0 DAQ benchmark' { & $uv.Source run python t0_daq.py -n $Pulses --line A --width-ms 1.0 --config $env:CCLAB_RIG_CONFIG --out $benchDir }
+            Invoke-Checked 'Python rig preflight' { & $uv.Source run python preflight.py --config $env:CCLAB_RIG_CONFIG @preflightArgs }
+            Invoke-Checked 'Python T0 DAQ benchmark' { & $uv.Source run python t0_daq.py -n $Pulses --line A --width-ms 1.0 --config $env:CCLAB_RIG_CONFIG --out $benchDir @dummyArgs }
             Invoke-Checked 'Python T1 flip benchmark' { & $uv.Source run python t1_flip.py --frames $Frames --screen $Screen --out $benchDir }
-            Invoke-Checked 'Python T2 photodiode benchmark' { & $uv.Source run python t2_photodiode.py --flips $Flips --rate 50000 --pd-chan ai0 --ttl-chan ai1 --screen $Screen --config $env:CCLAB_RIG_CONFIG --out $benchDir }
+            Invoke-Checked 'Python T2 photodiode benchmark' { & $uv.Source run python t2_photodiode.py --flips $Flips --rate 50000 --pd-chan ai0 --ttl-chan ai1 --screen $Screen --config $env:CCLAB_RIG_CONFIG --out $benchDir @dummyArgs }
             Invoke-Checked 'Python T4 microbenchmark' { & $uv.Source run python t4_micro.py -n 1000000 --reps 20 --out $benchDir }
 
             $benchMatlab = Join-Path $benchRoot 'matlab'
             $matlabTools = Join-Path $movieRoot 'Code\cclab-matlab-tools'
-            $matlabCommand = "addpath(genpath('$($benchMatlab -replace '''', '''''')')); addpath(genpath('$($matlabTools -replace '''', '''''')')); cd('$($benchDir -replace '''', '''''')'); assert(exist('Screen', 'file') ~= 0, 'Psychtoolbox is not on the MATLAB path.'); assert(exist('cclabInitDIO', 'file') ~= 0, 'cclab-matlab-tools is not on the MATLAB path.'); assert(license('test', 'Data_Acquisition_Toolbox'), 'MATLAB Data Acquisition Toolbox is required for T2.'); t0_daq('$rigName', $Pulses, 'A', 1.0); t1_flip($Frames, $Screen); t2_photodiode('$rigName', $Flips, 50000, $Screen); t4_micro(1000000, 20);"
+            if ($benchDummy) {
+                $matlabCommand = "addpath(genpath('$($benchMatlab -replace '''', '''''')')); addpath(genpath('$($matlabTools -replace '''', '''''')')); cd('$($benchDir -replace '''', '''''')'); assert(exist('Screen', 'file') ~= 0, 'Psychtoolbox is not on the MATLAB path.'); assert(exist('cclabInitDIO', 'file') ~= 0, 'cclab-matlab-tools is not on the MATLAB path.'); t0_daq('$rigName', $Pulses, 'A', 1.0); t1_flip($Frames, $Screen); t4_micro(1000000, 20);"
+            }
+            else {
+                $matlabCommand = "addpath(genpath('$($benchMatlab -replace '''', '''''')')); addpath(genpath('$($matlabTools -replace '''', '''''')')); cd('$($benchDir -replace '''', '''''')'); assert(exist('Screen', 'file') ~= 0, 'Psychtoolbox is not on the MATLAB path.'); assert(exist('cclabInitDIO', 'file') ~= 0, 'cclab-matlab-tools is not on the MATLAB path.'); assert(license('test', 'Data_Acquisition_Toolbox'), 'MATLAB Data Acquisition Toolbox is required for T2.'); t0_daq('$rigName', $Pulses, 'A', 1.0); t1_flip($Frames, $Screen); t2_photodiode('$rigName', $Flips, 50000, $Screen); t4_micro(1000000, 20);"
+            }
             Invoke-Checked 'MATLAB timing benchmark' { & $matlab.Source -batch $matlabCommand }
         }
         finally { Pop-Location }
