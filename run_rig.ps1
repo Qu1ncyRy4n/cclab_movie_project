@@ -99,6 +99,9 @@ function Copy-RunToArchive([string]$Source, [string]$Destination) {
     if ($LASTEXITCODE -gt 7) {
         throw "Archive copy failed with robocopy exit code $LASTEXITCODE. Local run remains at $Source."
     }
+    # Robocopy uses 1-7 for successful copies with informational differences.
+    # Prevent Invoke-Checked from treating a successful copy as a failure.
+    $global:LASTEXITCODE = 0
 }
 
 function Copy-PilotVideos([string]$PoolCsv, [string]$Source, [string]$Destination) {
