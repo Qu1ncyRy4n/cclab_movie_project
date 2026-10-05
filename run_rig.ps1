@@ -1,0 +1,196 @@
+<#
+.SYNOPSIS
+Run the exp_00 MATLAB pilot followed by the MATLAB/Python timing benchmark on a CCLab Windows rig.
+
+.DESCRIPTION
+All artifacts go into one timestamped local run folder. Optionally, the completed
+folder is copied to a NAS or USB destination without deleting the local source.
+#>
+[CmdletBinding()]
+param(
+    [string]$BenchRoot = (Join-Path $PSScriptRoot '..\mat_vs_py_bench'),
+    [string]$RigConfig = (Join-Path $PSScriptRoot 'Code\cclab-matlab-tools\cfg\rig-right.txt'),
+    [string]$RunRoot = (Join-Path (Split-Path $PSScriptRoot -Parent) 'data\runs'),
+    [string]$ArchiveRoot,
+    [ValidateSet('local', 'nas')]
+    [string]$VideoSource = 'local',
+    [string]$VideoRoot,
+    [string]$SessionId = (Get-Date -Format 'yyyy-MM-dd_HHmmss'),
+    [ValidatePattern('^[A-Za-z0-9_]{1,8}$')]
+    [string]$SubjectId,
+    [int]$Screen = 2,
+    [int]$Frames = 3000,
+    [int]$Pulses = 10000,
+    [int]$Flips = 300,
+    [ValidateSet('lab_120', 'lab_121', 'win_dummy', 'dev_wsl')]
+    [string]$ComputerProfile = 'lab_120',
+    [switch]$RunExperiment,
+    [switch]$SkipBench,
+    [switch]$DryRun
+)
+
+$ErrorActionPreference = 'Stop'
+$script:Completed = $false
+
+function Require-Path([string]$Path, [string]$Description) {
+    if (-not (Test-Path -LiteralPath $Path)) {
+        throw "$Description not found: $Path"
+    }
+}
+
+function Invoke-Checked([string]$Description, [scriptblock]$Command) {
+    Write-Host "`n== $Description ==" -ForegroundColor Cyan
+    & $Command
+    if ($LASTEXITCODE -ne 0) {
+        throw "$Description failed with exit code $LASTEXITCODE."
+    }
+}
+
+function Copy-RunToArchive([string]$Source, [string]$Destination) {
+    New-Item -ItemType Directory -Force -Path $Destination | Out-Null
+    & robocopy $Source $Destination /E /Z /R:3 /W:5 /COPY:DAT /DCOPY:DAT /NFL /NDL
+    if ($LASTEXITCODE -gt 7) {
+        throw "Archive copy failed with robocopy exit code $LASTEXITCODE. Local run remains at $Source."
+    }
+}
+
+function Get-OrInstall-UV {
+    $uvCommand = Get-Command uv -ErrorAction SilentlyContinue
+    if ($uvCommand) { return $uvCommand }
+
+    $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
+    if (-not $winget) { $winget = Get-Command winget -ErrorAction SilentlyContinue }
+    if (-not $winget) {
+        throw 'uv is not on PATH and winget is unavailable. Install UV manually: https://docs.astral.sh/uv/'
+    }
+
+    Write-Host 'UV is missing; installing it with winget...' -ForegroundColor Yellow
+    & $winget.Source install --id astral-sh.uv -e --accept-package-agreements --accept-source-agreements
+    if ($LASTEXITCODE -ne 0) { throw "winget could not install UV (exit code $LASTEXITCODE)." }
+
+    $uvCommand = Get-Command uv -ErrorAction SilentlyContinue
+    if (-not $uvCommand) {
+        $installedUv = Join-Path $env:USERPROFILE '.local\bin\uv.exe'
+        if (Test-Path -LiteralPath $installedUv) {
+            $uvCommand = Get-Command $installedUv
+        }
+    }
+    if (-not $uvCommand) {
+        throw 'UV was installed but is not available to this PowerShell session. Close this window, open a new one, and run again.'
+    }
+    return $uvCommand
+}
+
+Require-Path $PSScriptRoot 'Movie-project repository'
+Require-Path $BenchRoot 'Benchmark repository'
+Require-Path (Join-Path $PSScriptRoot 'Code\exp00_pilot_interleave\RUN_exp00_pilot.m') 'exp_00 MATLAB entry point'
+Require-Path (Join-Path $PSScriptRoot 'Code\cclab-matlab-tools\cclabInitDIO.m') 'cclab MATLAB tools'
+
+if ($DryRun -and $RunExperiment) {
+    throw '-DryRun only validates the exp_00 configuration and videos. Do not combine it with -RunExperiment.'
+}
+if ($RunExperiment -and -not $SubjectId) {
+    throw '-SubjectId (1-8 letters, numbers, or underscores) is required with -RunExperiment.'
+}
+if (-not $DryRun) {
+    Require-Path $RigConfig 'Rig configuration'
+    Require-Path (Join-Path $BenchRoot 'matlab\t2_photodiode.m') 'MATLAB benchmark arm'
+}
+
+if (-not $DryRun) { $uv = Get-OrInstall-UV }
+
+$matlab = Get-Command matlab.exe -ErrorAction SilentlyContinue
+if (-not $matlab) { $matlab = Get-Command matlab -ErrorAction SilentlyContinue }
+if (-not $matlab) {
+    throw 'MATLAB is not on PATH. Add MATLAB\bin to PATH, then run this script again.'
+}
+
+$movieRoot = (Resolve-Path -LiteralPath $PSScriptRoot)
+$benchRoot = (Resolve-Path -LiteralPath $BenchRoot)
+$runDir = Join-Path $RunRoot $SessionId
+if (Test-Path -LiteralPath $runDir) {
+    throw "Run folder already exists: $runDir. Choose a new -SessionId."
+}
+
+$logsDir = Join-Path $runDir 'logs'
+$experimentDir = Join-Path $runDir 'experiment'
+$benchDir = Join-Path $runDir 'benchmark'
+New-Item -ItemType Directory -Force -Path $logsDir, $experimentDir, $benchDir | Out-Null
+
+$rigConfigResolved = $null
+if (-not $DryRun) {
+    $rigConfigResolved = (Resolve-Path -LiteralPath $RigConfig)
+    $env:CCLAB_RIG_CONFIG = $rigConfigResolved.Path
+}
+$env:CCLAB_COMPUTER_NAME = $ComputerProfile
+$env:CCLAB_VIDEO_SOURCE = $VideoSource
+if ($VideoRoot) { $env:CCLAB_VIDEO_ROOT = $VideoRoot }
+else { Remove-Item Env:CCLAB_VIDEO_ROOT -ErrorAction SilentlyContinue }
+if (-not $DryRun) {
+    $env:CCLAB_BENCH_RESULTS_DIR = $benchDir
+    $rigName = [IO.Path]::GetFileNameWithoutExtension($RigConfig)
+}
+$transcript = Join-Path $logsDir 'runner_transcript.txt'
+
+Start-Transcript -Path $transcript -Force | Out-Null
+try {
+    $metadata = [ordered]@{
+        session_id = $SessionId
+        started_local = (Get-Date).ToString('o')
+        computer_name = $env:COMPUTERNAME
+        computer_profile = $ComputerProfile
+        video_source = $VideoSource
+        screen = $Screen
+        movie_project = $movieRoot.Path
+        benchmark_project = $benchRoot.Path
+        rig_config = if ($rigConfigResolved) { $rigConfigResolved.Path } else { $null }
+    } | ConvertTo-Json
+    Set-Content -LiteralPath (Join-Path $runDir 'run_metadata.json') -Value $metadata
+
+    $sourceExperimentDir = Join-Path $movieRoot 'Code\exp00_pilot_interleave'
+    if ($DryRun) {
+        $dryRunCommand = "addpath(genpath('$($sourceExperimentDir -replace '''', '''''')')); cclab = CONFI_exp00_pilot(); pool = readtable(cclab.poolFile); assert(height(pool) >= 2, 'Pilot pool needs at least two videos.'); for i = 1:height(pool), assert(exist(fullfile(cclab.filepath, 'video_all', char(pool.filename(i))), 'file') == 2, 'Missing pilot video: %s', pool.filename(i)); end; fprintf('DRY RUN OK: %s (%d videos)\n', cclab.filepath, height(pool));"
+        Invoke-Checked 'exp_00 headless configuration and video check' { & $matlab.Source -batch $dryRunCommand }
+    }
+    elseif ($RunExperiment) {
+        $safeSubjectId = $SubjectId -replace '''', ''''''
+        $experimentCommand = "addpath(genpath('$($sourceExperimentDir -replace '''', '''''')')); cd('$($experimentDir -replace '''', '''''')'); RUN_exp00_pilot('$safeSubjectId');"
+        Invoke-Checked 'exp_00 MATLAB pilot' { & $matlab.Source -batch $experimentCommand }
+    }
+    else {
+        Write-Host "`nexp_00 was not launched. Use -RunExperiment to launch it before the benchmarks." -ForegroundColor Yellow
+    }
+
+    if (-not $DryRun -and -not $SkipBench) {
+        Push-Location $benchRoot
+        try {
+            Invoke-Checked 'Install Python benchmark dependencies' { & $uv.Source sync --extra rig --extra plot }
+            Invoke-Checked 'Python rig preflight' { & $uv.Source run python preflight.py --config $env:CCLAB_RIG_CONFIG }
+            Invoke-Checked 'Python T0 DAQ benchmark' { & $uv.Source run python t0_daq.py -n $Pulses --line A --width-ms 1.0 --config $env:CCLAB_RIG_CONFIG --out $benchDir }
+            Invoke-Checked 'Python T1 flip benchmark' { & $uv.Source run python t1_flip.py --frames $Frames --screen $Screen --out $benchDir }
+            Invoke-Checked 'Python T2 photodiode benchmark' { & $uv.Source run python t2_photodiode.py --flips $Flips --rate 50000 --pd-chan ai0 --ttl-chan ai1 --screen $Screen --config $env:CCLAB_RIG_CONFIG --out $benchDir }
+            Invoke-Checked 'Python T4 microbenchmark' { & $uv.Source run python t4_micro.py -n 1000000 --reps 20 --out $benchDir }
+
+            $benchMatlab = Join-Path $benchRoot 'matlab'
+            $matlabTools = Join-Path $movieRoot 'Code\cclab-matlab-tools'
+            $matlabCommand = "addpath(genpath('$($benchMatlab -replace '''', '''''')')); addpath(genpath('$($matlabTools -replace '''', '''''')')); cd('$($benchDir -replace '''', '''''')'); assert(exist('Screen', 'file') ~= 0, 'Psychtoolbox is not on the MATLAB path.'); assert(exist('cclabInitDIO', 'file') ~= 0, 'cclab-matlab-tools is not on the MATLAB path.'); assert(license('test', 'Data_Acquisition_Toolbox'), 'MATLAB Data Acquisition Toolbox is required for T2.'); t0_daq('$rigName', $Pulses, 'A', 1.0); t1_flip($Frames, $Screen); t2_photodiode('$rigName', $Flips, 50000, $Screen); t4_micro(1000000, 20);"
+            Invoke-Checked 'MATLAB timing benchmark' { & $matlab.Source -batch $matlabCommand }
+        }
+        finally { Pop-Location }
+    }
+
+    $script:Completed = $true
+    Write-Host "`nLocal run folder: $runDir" -ForegroundColor Green
+}
+finally {
+    Stop-Transcript | Out-Null
+}
+
+if ($ArchiveRoot -and $script:Completed) {
+    $archiveDir = Join-Path $ArchiveRoot $SessionId
+    Invoke-Checked "Archive run to $archiveDir" { Copy-RunToArchive $runDir $archiveDir }
+    Write-Host "Archived run folder: $archiveDir" -ForegroundColor Green
+}
+
+if (-not $script:Completed) { exit 1 }
+Write-Host 'Rig workflow completed.' -ForegroundColor Green

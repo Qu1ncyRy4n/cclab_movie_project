@@ -1,4 +1,4 @@
-function RUN_exp00_pilot()
+function RUN_exp00_pilot(subID)
 % RUN_exp00_pilot
 %
 % exp_00: the deliberately tiny pilot. Per trial:
@@ -24,7 +24,6 @@ function RUN_exp00_pilot()
 %
 % Adapted from RUN_exp01_transitions.m / RUN_freeviewingTraining_movie.m.
 
-clear all
 close all
 
 useRealEyelink = false;
@@ -42,14 +41,18 @@ try
         fprintf('--- Using SHUFFLED (new) random seed ---\n');
     end
 
-    prompt = {'Enter subID file name (up to 8 characters)'};
-    answer = inputdlg(prompt, 'Create subID file', 1, {'demo'});
-    if isempty(answer)
-        fprintf('Session cancelled by user\n');
-        error('Session cancelled by user');
+    if nargin < 1
+        prompt = {'Enter subID file name (up to 8 characters)'};
+        answer = inputdlg(prompt, 'Create subID file', 1, {'demo'});
+        if isempty(answer)
+            fprintf('Session cancelled by user\n');
+            error('Session cancelled by user');
+        end
+        subID = answer{1};
+    else
+        subID = char(subID);
     end
-    subID = answer{1};
-    if length(subID) > 8
+    if length(subID) > 8 || isempty(regexp(subID, '^[A-Za-z0-9_]+$', 'once'))
         error('Filename needs to be no more than 8 characters long (letters, numbers and underscores only)');
     end
 

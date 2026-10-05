@@ -10,33 +10,42 @@ function cclab = CONFI_exp00_pilot()
 % if you add a rig.
 
 %% Machine / rig identity
-cclab.computer_name = 'win_dummy';
+% run_rig.ps1 sets these variables for portable rig installs. Direct/manual
+% use keeps the prior Windows dummy-mode and local-video defaults.
+cclab.computer_name = lower(getenv('CCLAB_COMPUTER_NAME'));
+if isempty(cclab.computer_name)
+    cclab.computer_name = 'win_dummy';
+end
+cclab.video_source = lower(getenv('CCLAB_VIDEO_SOURCE'));
+if isempty(cclab.video_source)
+    cclab.video_source = 'local';
+end
+code_path = fileparts(fileparts(mfilename('fullpath')));
 
 % Where the videos are read from — same semantics as exp01, see its CONFI
 % for the tradeoffs. 'local' is the default here since the win_dummy case
 % below points at a confirmed-present local copy, no NAS/VPN dependency.
-cclab.video_source = 'local';
 
 switch cclab.computer_name
     case {'lab_120', 'lab_121'}
         cclab.dummymode  = 0;
         cclab.filepath_nas   = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset';
         cclab.filepath_local = 'C:\cclab_data\video_ebm_dataset';
-        cclab.matlab_path = 'C:\Users\cclab\Desktop\cclab_movie_project\Code';
+        cclab.matlab_path = code_path;
         cclab.ScreenNumber = 2;
         cclab.screenSize   = [0 0];
     case 'q_mb_pro'
         cclab.dummymode  = 1;
         cclab.filepath_nas   = '/Volumes/cclab/shared/Bliss-Moreau_Machado_Videos/video_ebm_dataset';
         cclab.filepath_local = fullfile(getenv('HOME'), 'data', 'video_ebm_dataset');
-        cclab.matlab_path = '/Users/username/Documents/MATLAB/cclab_movie_project/Code';
+        cclab.matlab_path = code_path;
         cclab.ScreenNumber = 0;
         cclab.screenSize   = [1080 720];
     case 'dev_wsl'
         cclab.dummymode  = 1;
         cclab.filepath_nas   = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset';
         cclab.filepath_local = 'C:\cclab_data\video_ebm_dataset';
-        cclab.matlab_path = 'Q:\home\qix\dev\cclab_movie_project\Code';
+        cclab.matlab_path = code_path;
         cclab.ScreenNumber = 0;
         cclab.screenSize   = [1080 720];
     case 'win_dummy'
@@ -49,7 +58,7 @@ switch cclab.computer_name
         cclab.dummymode  = 1;
         cclab.filepath_nas   = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset';
         cclab.filepath_local = 'C:\Users\qmryan\Desktop\Bliss-Moreau_Machado_Videos\video_ebm_dataset';
-        cclab.matlab_path = fileparts(fileparts(mfilename('fullpath'))); % .../cclab_movie_project/Code
+        cclab.matlab_path = code_path;
         % ScreenNumber=0 = "the full Windows desktop area" spanning ALL
         % monitors (per PTB's own startup log on a multi-monitor machine),
         % not necessarily the primary display. If a run seems to launch
@@ -67,6 +76,11 @@ switch lower(cclab.video_source)
     case 'local', cclab.filepath = cclab.filepath_local;
     otherwise
         error('CONFI: video_source must be ''nas'' or ''local'', got "%s".', cclab.video_source);
+end
+
+video_root_override = getenv('CCLAB_VIDEO_ROOT');
+if ~isempty(video_root_override)
+    cclab.filepath = video_root_override;
 end
 
 if ~exist(fullfile(cclab.filepath, 'video_all'), 'dir')
