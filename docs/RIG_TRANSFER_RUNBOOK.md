@@ -18,12 +18,9 @@ path. The installer copies the code to the experiment computer's local disk.
 
 ## Before the first session
 
-- [ ] **Which rig is which?** The benchmarks and reward/TTL lines use
-  `rig-right.txt` for both `lab_120` and `lab_121`. If one of them is wired as
-  the left rig, this must be fixed before collecting data on it.
-- [ ] **Internet on the experiment computer.** Step 1 (setup) downloads Python
-  3.11 and the benchmark packages the first time it runs. If the experiment
-  computer is offline, setup will fail at "Install Python benchmark environment".
+- Both `lab_120` and `lab_121` use the `rig-right.txt` wiring config.
+- The experiment computer needs internet the first time setup runs: it
+  downloads Python 3.11 and the benchmark packages.
 - [ ] **MATLAB on PATH.** On each computer, MATLAB must start from a plain
   PowerShell or Command Prompt window by typing `matlab`.
 - [ ] Before interpreting timing data, confirm the photodiode and TTL loopback
@@ -87,22 +84,40 @@ Delete `Desktop\CCLabRig` afterwards if you no longer need it.
    `C:\CCLabRig`. Expected: `INSTALL OK`, and the `C:\CCLabRig` folder opens.
 
 Reinstalling over an existing `C:\CCLabRig` replaces the code exactly and
-keeps `C:\CCLabRig\data\runs` and the saved rig profile.
+keeps `C:\CCLabRig\data\runs`, the saved rig profile, and `video_folder.txt`.
 
-### 2. Set up (after each install)
+### 2. Point at the videos (once per computer, optional)
+
+By default setup copies the eight pilot videos to
+`C:\cclab_data\video_ebm_dataset\`. If the computer already has the dataset
+somewhere else (for example on the Desktop), open
+**`C:\CCLabRig\video_folder.txt`** in Notepad and add that folder's path on
+its own line under the `#` header, for example:
+
+```text
+%USERPROFILE%\Desktop\Bliss-Moreau_Machado_Videos\video_ebm_dataset
+```
+
+Use the folder that contains `video_all` (or `video_all` itself); the File
+Explorer address bar shows the exact path. Save and close. Setup prints
+`Local videos (from video_folder.txt): ...` when it uses it, and copies in
+only the pilot videos that are missing.
+
+### 3. Set up (after each install)
 
 Double-click **`C:\CCLabRig\1_Setup_Rig.cmd`** and enter the rig profile
-(`lab_120` or `lab_121`). It is remembered for steps 3 and 4. Setup:
+(`lab_120` or `lab_121`). It is remembered for steps 4 and 5. Setup:
 
-- copies the eight pilot videos from the NAS to
-  `C:\cclab_data\video_ebm_dataset\video_all\` (skips ones already there),
+- copies the eight pilot videos from the NAS into the local video folder
+  (`video_folder.txt`, else `C:\cclab_data\video_ebm_dataset\video_all\`),
+  skipping ones already there,
 - installs the Python benchmark environment,
 - runs the hardware preflight (NI-DAQmx, PCIe-6351, displays),
 - checks MATLAB can load the experiment configuration and all pilot videos.
 
 Expected: `SETUP OK`. On `SETUP FAILED`, see Part E.
 
-### 3. Benchmarks (before the session)
+### 4. Benchmarks (before the session)
 
 Confirm the photodiode is on the flashing corner and the TTL loopback is
 connected, then double-click **`C:\CCLabRig\2_Run_Benchmarks.cmd`**. Press
@@ -112,7 +127,7 @@ Enter twice to accept the saved profile and the NAS results folder
 It takes about five minutes. Flashing squares on the stimulus monitor are the
 test. Expected: `BENCHMARKS DONE`.
 
-### 4. Experiment
+### 5. Experiment
 
 Close other stimulus applications and confirm the EyeLink host and reward
 hardware are connected. Double-click **`C:\CCLabRig\3_Run_Experiment.cmd`**,
@@ -122,7 +137,7 @@ twice for the saved profile and NAS results folder.
 Keys: `ESC` quit, `PageUp` pause, `PageDown` resume. Expected:
 `EXPERIMENT DONE`.
 
-Steps 3 and 4 are independent: either can be rerun on its own, and each run
+Steps 4 and 5 are independent: either can be rerun on its own, and each run
 gets its own results folder.
 
 ## Part D — Get the data back
@@ -152,7 +167,7 @@ under `C:\CCLabRig\data\runs\`.
 | --- | --- |
 | `MATLAB is not on PATH` | Add the MATLAB `bin` folder to the user `PATH` (Windows Settings → "Edit environment variables for your account"), then rerun the launcher. |
 | `Pilot video on the NAS not found` | The NAS is not reachable or the dataset moved. Open `\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset\video_all` in File Explorer to check, then rerun setup. |
-| `Missing pilot video` / `video_all not found` | Rerun `1_Setup_Rig.cmd`; it copies whatever is missing. |
+| `Missing pilot video` / `video_all not found` | Check the path in `C:\CCLabRig\video_folder.txt` (if set) points at the folder containing `video_all`, then rerun `1_Setup_Rig.cmd`; it copies whatever is missing. |
 | `cclab MATLAB tools not found` | The package was staged without the MATLAB-tools submodule. Stage a new package with `./stage_to_nas.sh` (it initializes the submodule) and reinstall. |
 | UV installation fails | Install UV from <https://docs.astral.sh/uv/> (or `winget install --id astral-sh.uv -e`), close the window, rerun setup. |
 | "Install Python benchmark environment" fails | Usually no internet. If it mentions the lockfile, the package is out of date: stage and install a new one. |

@@ -52,6 +52,23 @@ if (-not $RigConfig) { $RigConfig = Join-Path $scriptRoot "Code\cclab-matlab-too
 if ($Screen -lt 0) { $Screen = if ($benchDummy) { 0 } else { 2 } }
 if (-not $RunRoot) { $RunRoot = Join-Path (Split-Path $scriptRoot -Parent) 'data\runs' }
 
+# video_folder.txt beside the launchers overrides the local video location
+# without editing code: first non-comment line, either the dataset folder or
+# its video_all subfolder.
+$videoFolderFile = Join-Path (Split-Path $scriptRoot -Parent) 'video_folder.txt'
+if (-not $PSBoundParameters.ContainsKey('LocalVideoRoot') -and (Test-Path -LiteralPath $videoFolderFile)) {
+    $line = Get-Content -LiteralPath $videoFolderFile |
+        ForEach-Object { $_.Trim().Trim('"') } |
+        Where-Object { $_ -and -not $_.StartsWith('#') } |
+        Select-Object -First 1
+    if ($line) {
+        $line = [Environment]::ExpandEnvironmentVariables($line).TrimEnd('\')
+        if ((Split-Path $line -Leaf) -eq 'video_all') { $line = Split-Path $line -Parent }
+        $LocalVideoRoot = $line
+        Write-Host "Local videos (from video_folder.txt): $LocalVideoRoot"
+    }
+}
+
 if (@($Setup, $DryRun, $RunExperiment | Where-Object { $_ }).Count -gt 1) {
     throw 'Use only one of -Setup, -DryRun, or -RunExperiment.'
 }

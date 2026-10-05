@@ -26,6 +26,11 @@ foreach ($name in @('cclab_movie_project', 'mat_vs_py_bench')) {
 }
 
 Get-ChildItem -LiteralPath $packageRoot -Filter '?_*.cmd' | Copy-Item -Destination $InstallRoot -Force
+# Settings the experimenter edits are copied only once, never overwritten.
+$videoFolderFile = Join-Path $InstallRoot 'video_folder.txt'
+if (-not (Test-Path -LiteralPath $videoFolderFile)) {
+    Copy-Item -LiteralPath (Join-Path $packageRoot 'video_folder.txt') -Destination $videoFolderFile
+}
 Write-Host "Installed CCLab rig package to $InstallRoot" -ForegroundColor Green
 Write-Host "In $InstallRoot, double-click 1_Setup_Rig.cmd, then 2_Run_Benchmarks.cmd, then 3_Run_Experiment.cmd." -ForegroundColor Green
 if ($OpenFolder) { Start-Process explorer.exe $InstallRoot }

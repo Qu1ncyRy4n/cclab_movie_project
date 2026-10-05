@@ -50,6 +50,7 @@ New-Item -ItemType Directory -Path $Destination | Out-Null
 Copy-Tree $scriptRoot (Join-Path $Destination 'cclab_movie_project')
 Copy-Tree $BenchSource (Join-Path $Destination 'mat_vs_py_bench')
 Copy-Item -LiteralPath (Join-Path $scriptRoot 'rig_package\Install-CCLabRig.ps1') -Destination $Destination
+Copy-Item -LiteralPath (Join-Path $scriptRoot 'rig_package\video_folder.txt') -Destination $Destination
 Get-ChildItem -LiteralPath (Join-Path $scriptRoot 'rig_package') -Filter '*.cmd' | Copy-Item -Destination $Destination
 
 @"
