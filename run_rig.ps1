@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-Run the exp_00 MATLAB pilot followed by the MATLAB/Python timing benchmark on a CCLab Windows rig.
+Run the MATLAB/Python timing benchmark followed by the exp_00 MATLAB pilot on a CCLab Windows rig.
 
 .DESCRIPTION
 All artifacts go into one timestamped local run folder. Optionally, the completed
@@ -160,20 +160,6 @@ try {
     } | ConvertTo-Json
     Set-Content -LiteralPath (Join-Path $runDir 'run_metadata.json') -Value $metadata
 
-    $sourceExperimentDir = Join-Path $movieRoot 'Code\exp00_pilot_interleave'
-    if ($DryRun) {
-        $dryRunCommand = "addpath(genpath('$($sourceExperimentDir -replace '''', '''''')')); cclab = CONFI_exp00_pilot(); pool = readtable(cclab.poolFile); assert(height(pool) >= 2, 'Pilot pool needs at least two videos.'); for i = 1:height(pool), assert(exist(fullfile(cclab.filepath, 'video_all', char(pool.filename(i))), 'file') == 2, 'Missing pilot video: %s', pool.filename(i)); end; fprintf('DRY RUN OK: %s (%d videos)\n', cclab.filepath, height(pool));"
-        Invoke-Checked 'exp_00 headless configuration and video check' { & $matlab.Source -batch $dryRunCommand }
-    }
-    elseif ($RunExperiment) {
-        $safeSubjectId = $SubjectId -replace '''', ''''''
-        $experimentCommand = "addpath(genpath('$($sourceExperimentDir -replace '''', '''''')')); cd('$($experimentDir -replace '''', '''''')'); RUN_exp00_pilot('$safeSubjectId');"
-        Invoke-Checked 'exp_00 MATLAB pilot' { & $matlab.Source -batch $experimentCommand }
-    }
-    else {
-        Write-Host "`nexp_00 was not launched. Use -RunExperiment to launch it before the benchmarks." -ForegroundColor Yellow
-    }
-
     if (-not $DryRun -and -not $SkipBench) {
         if ($benchDummy) {
             Write-Host "`nBenchmarks run in DUMMY mode (synthetic DIO/photodiode). Results are not timing measurements." -ForegroundColor Yellow
@@ -204,6 +190,20 @@ try {
             Invoke-Checked 'MATLAB timing benchmark' { & $matlab.Source -batch $matlabCommand }
         }
         finally { Pop-Location }
+    }
+
+    $sourceExperimentDir = Join-Path $movieRoot 'Code\exp00_pilot_interleave'
+    if ($DryRun) {
+        $dryRunCommand = "addpath(genpath('$($sourceExperimentDir -replace '''', '''''')')); cclab = CONFI_exp00_pilot(); pool = readtable(cclab.poolFile); assert(height(pool) >= 2, 'Pilot pool needs at least two videos.'); for i = 1:height(pool), assert(exist(fullfile(cclab.filepath, 'video_all', char(pool.filename(i))), 'file') == 2, 'Missing pilot video: %s', pool.filename(i)); end; fprintf('DRY RUN OK: %s (%d videos)\n', cclab.filepath, height(pool));"
+        Invoke-Checked 'exp_00 headless configuration and video check' { & $matlab.Source -batch $dryRunCommand }
+    }
+    elseif ($RunExperiment) {
+        $safeSubjectId = $SubjectId -replace '''', ''''''
+        $experimentCommand = "addpath(genpath('$($sourceExperimentDir -replace '''', '''''')')); cd('$($experimentDir -replace '''', '''''')'); RUN_exp00_pilot('$safeSubjectId');"
+        Invoke-Checked 'exp_00 MATLAB pilot' { & $matlab.Source -batch $experimentCommand }
+    }
+    else {
+        Write-Host "`nexp_00 was not launched. Use -RunExperiment to launch it after the benchmarks." -ForegroundColor Yellow
     }
 
     $script:Completed = $true

@@ -95,8 +95,9 @@ folder so dummy runs never mix with collection data.
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$TestRoot\cclab_movie_project\run_rig.ps1" -ComputerProfile win_dummy -VideoSource nas -VideoRoot "\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset" -RunExperiment -SubjectId dummy01 -ArchiveRoot "\\cns-nas.ucdavis.edu\cclab\shared\rig_runs\exp00_dummy"
 ```
 
-Hold the mouse on the fixation dot to start each trial; ESC ends the
-experiment early and the benchmarks still run afterwards.
+The benchmarks run first (a PTB flip-test window flashes); then the experiment
+starts. Hold the mouse on the fixation dot to start each trial; ESC ends the
+experiment early.
 
 ## 2. Install and run on the experiment computer (Windows only)
 
@@ -170,8 +171,10 @@ location, enter a NAS collection root, for example:
 \\cns-nas.ucdavis.edu\cclab\shared\rig_runs\exp00
 ```
 
-The launcher runs the MATLAB pilot first, then the Python and MATLAB timing
-benchmarks. It creates one timestamped subfolder under both the local
+The launcher runs the Python and MATLAB timing benchmarks first, then the
+MATLAB pilot. A failed benchmark stops the launcher before the experiment
+starts, so fix the cause (or rerun with `-SkipBench`) before the subject is
+seated. It creates one timestamped subfolder under both the local
 `C:\CCLabRig\data\runs\` root and the archive root. Keep the local folder
 until the NAS copy has been checked.
 
