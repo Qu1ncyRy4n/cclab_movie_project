@@ -1,9 +1,14 @@
 <#
 .SYNOPSIS
-Run the MATLAB/Python timing benchmark followed by the exp_00 MATLAB pilot on a CCLab Windows rig.
+Set up, benchmark, or run the exp_00 MATLAB pilot on a CCLab Windows rig.
 
 .DESCRIPTION
-All artifacts go into one timestamped local run folder. Optionally, the completed
+Modes (the rig_package launchers call one each):
+  -Setup          copy pilot videos locally, install the Python env, preflight, video check
+  (no mode flag)  MATLAB/Python timing benchmarks only
+  -RunExperiment  benchmarks, then the exp_00 pilot (add -SkipBench for the pilot only)
+  -DryRun         headless exp_00 configuration and video check only
+Every run gets its own timestamped local folder. Optionally, the completed
 folder is copied to a NAS or USB destination without deleting the local source.
 #>
 [CmdletBinding()]
@@ -15,6 +20,8 @@ param(
     [ValidateSet('local', 'nas')]
     [string]$VideoSource = 'local',
     [string]$VideoRoot,
+    [string]$NasVideoRoot = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset',
+    [string]$LocalVideoRoot = 'C:\cclab_data\video_ebm_dataset',
     [string]$SessionId = (Get-Date -Format 'yyyy-MM-dd_HHmmss'),
     [ValidatePattern('^[A-Za-z0-9_]{1,8}$')]
     [string]$SubjectId,
@@ -24,6 +31,7 @@ param(
     [int]$Flips = 300,
     [ValidateSet('lab_120', 'lab_121', 'win_dummy', 'dev_wsl')]
     [string]$ComputerProfile = 'lab_120',
+    [switch]$Setup,
     [switch]$RunExperiment,
     [switch]$SkipBench,
     [switch]$DryRun
@@ -43,6 +51,16 @@ $defaultRig = if ($benchDummy) { 'dummy.txt' } else { 'rig-right.txt' }
 if (-not $RigConfig) { $RigConfig = Join-Path $scriptRoot "Code\cclab-matlab-tools\cfg\$defaultRig" }
 if ($Screen -lt 0) { $Screen = if ($benchDummy) { 0 } else { 2 } }
 if (-not $RunRoot) { $RunRoot = Join-Path (Split-Path $scriptRoot -Parent) 'data\runs' }
+
+if (@($Setup, $DryRun, $RunExperiment | Where-Object { $_ }).Count -gt 1) {
+    throw 'Use only one of -Setup, -DryRun, or -RunExperiment.'
+}
+$runBench = -not ($Setup -or $DryRun -or $SkipBench)
+if (-not $PSBoundParameters.ContainsKey('SessionId')) {
+    $mode = if ($Setup) { 'setup' } elseif ($DryRun) { 'dryrun' }
+            elseif ($RunExperiment -and $runBench) { 'bench_exp' } elseif ($RunExperiment) { 'exp' } else { 'bench' }
+    $SessionId = "${SessionId}_$mode"
+}
 
 function Require-Path([string]$Path, [string]$Description) {
     if (-not (Test-Path -LiteralPath $Path)) {
@@ -64,6 +82,22 @@ function Copy-RunToArchive([string]$Source, [string]$Destination) {
     if ($LASTEXITCODE -gt 7) {
         throw "Archive copy failed with robocopy exit code $LASTEXITCODE. Local run remains at $Source."
     }
+}
+
+function Copy-PilotVideos([string]$PoolCsv, [string]$Source, [string]$Destination) {
+    $sourceDir = Join-Path $Source 'video_all'
+    $destinationDir = Join-Path $Destination 'video_all'
+    New-Item -ItemType Directory -Force -Path $destinationDir | Out-Null
+    $pool = Import-Csv -LiteralPath $PoolCsv
+    foreach ($video in $pool.filename) {
+        $target = Join-Path $destinationDir $video
+        if (Test-Path -LiteralPath $target) { Write-Host "  present  $video"; continue }
+        $sourceFile = Join-Path $sourceDir $video
+        Require-Path $sourceFile 'Pilot video on the NAS'
+        Copy-Item -LiteralPath $sourceFile -Destination $target
+        Write-Host "  copied   $video"
+    }
+    Write-Host "$(@($pool).Count) pilot videos in $destinationDir"
 }
 
 function Get-OrInstall-UV {
@@ -98,9 +132,6 @@ Require-Path $BenchRoot 'Benchmark repository'
 Require-Path (Join-Path $scriptRoot 'Code\exp00_pilot_interleave\RUN_exp00_pilot.m') 'exp_00 MATLAB entry point'
 Require-Path (Join-Path $scriptRoot 'Code\cclab-matlab-tools\cclabInitDIO.m') 'cclab MATLAB tools'
 
-if ($DryRun -and $RunExperiment) {
-    throw '-DryRun only validates the exp_00 configuration and videos. Do not combine it with -RunExperiment.'
-}
 if ($RunExperiment -and -not $SubjectId) {
     throw '-SubjectId (1-8 letters, numbers, or underscores) is required with -RunExperiment.'
 }
@@ -109,7 +140,7 @@ if (-not $DryRun) {
     Require-Path (Join-Path $BenchRoot 'matlab\t2_photodiode.m') 'MATLAB benchmark arm'
 }
 
-if (-not $DryRun) { $uv = Get-OrInstall-UV }
+if (-not $DryRun -and ($Setup -or $runBench)) { $uv = Get-OrInstall-UV }
 
 $matlab = Get-Command matlab.exe -ErrorAction SilentlyContinue
 if (-not $matlab) { $matlab = Get-Command matlab -ErrorAction SilentlyContinue }
@@ -136,7 +167,10 @@ if (-not $DryRun) {
 }
 $env:CCLAB_COMPUTER_NAME = $ComputerProfile
 $env:CCLAB_VIDEO_SOURCE = $VideoSource
+# -Setup copies the pilot videos to $LocalVideoRoot, so local runs read from the
+# same place on every profile.
 if ($VideoRoot) { $env:CCLAB_VIDEO_ROOT = $VideoRoot }
+elseif ($VideoSource -eq 'local') { $env:CCLAB_VIDEO_ROOT = $LocalVideoRoot }
 else { Remove-Item Env:CCLAB_VIDEO_ROOT -ErrorAction SilentlyContinue }
 if (-not $DryRun) {
     $env:CCLAB_BENCH_RESULTS_DIR = $benchDir
@@ -160,7 +194,22 @@ try {
     } | ConvertTo-Json
     Set-Content -LiteralPath (Join-Path $runDir 'run_metadata.json') -Value $metadata
 
-    if (-not $DryRun -and -not $SkipBench) {
+    if ($Setup) {
+        if ($VideoSource -eq 'local') {
+            $poolCsv = Join-Path $movieRoot 'video_ebm_dataset\pilot_pool.csv'
+            Invoke-Checked "Copy pilot videos to $LocalVideoRoot" { Copy-PilotVideos $poolCsv $NasVideoRoot $LocalVideoRoot; $global:LASTEXITCODE = 0 }
+        }
+        $preflightArgs = @()
+        if ($benchDummy) { $preflightArgs = @('--off-rig') }
+        Push-Location $benchRoot
+        try {
+            Invoke-Checked 'Install Python benchmark environment' { & $uv.Source sync --locked --extra rig --extra plot }
+            Invoke-Checked 'Python rig preflight' { & $uv.Source run python preflight.py --config $env:CCLAB_RIG_CONFIG @preflightArgs }
+        }
+        finally { Pop-Location }
+    }
+
+    if ($runBench) {
         if ($benchDummy) {
             Write-Host "`nBenchmarks run in DUMMY mode (synthetic DIO/photodiode). Results are not timing measurements." -ForegroundColor Yellow
         }
@@ -172,7 +221,7 @@ try {
         }
         Push-Location $benchRoot
         try {
-            Invoke-Checked 'Install Python benchmark dependencies' { & $uv.Source sync --extra rig --extra plot }
+            Invoke-Checked 'Install Python benchmark dependencies' { & $uv.Source sync --locked --extra rig --extra plot }
             Invoke-Checked 'Python rig preflight' { & $uv.Source run python preflight.py --config $env:CCLAB_RIG_CONFIG @preflightArgs }
             Invoke-Checked 'Python T0 DAQ benchmark' { & $uv.Source run python t0_daq.py -n $Pulses --line A --width-ms 1.0 --config $env:CCLAB_RIG_CONFIG --out $benchDir @dummyArgs }
             Invoke-Checked 'Python T1 flip benchmark' { & $uv.Source run python t1_flip.py --frames $Frames --screen $Screen --out $benchDir }
@@ -193,7 +242,7 @@ try {
     }
 
     $sourceExperimentDir = Join-Path $movieRoot 'Code\exp00_pilot_interleave'
-    if ($DryRun) {
+    if ($DryRun -or $Setup) {
         $dryRunCommand = "addpath(genpath('$($sourceExperimentDir -replace '''', '''''')')); cclab = CONFI_exp00_pilot(); pool = readtable(cclab.poolFile); assert(height(pool) >= 2, 'Pilot pool needs at least two videos.'); for i = 1:height(pool), assert(exist(fullfile(cclab.filepath, 'video_all', char(pool.filename(i))), 'file') == 2, 'Missing pilot video: %s', pool.filename(i)); end; fprintf('DRY RUN OK: %s (%d videos)\n', cclab.filepath, height(pool));"
         Invoke-Checked 'exp_00 headless configuration and video check' { & $matlab.Source -batch $dryRunCommand }
     }
@@ -201,9 +250,6 @@ try {
         $safeSubjectId = $SubjectId -replace '''', ''''''
         $experimentCommand = "addpath(genpath('$($sourceExperimentDir -replace '''', '''''')')); cd('$($experimentDir -replace '''', '''''')'); RUN_exp00_pilot('$safeSubjectId');"
         Invoke-Checked 'exp_00 MATLAB pilot' { & $matlab.Source -batch $experimentCommand }
-    }
-    else {
-        Write-Host "`nexp_00 was not launched. Use -RunExperiment to launch it after the benchmarks." -ForegroundColor Yellow
     }
 
     $script:Completed = $true

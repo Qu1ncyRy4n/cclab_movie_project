@@ -1,223 +1,177 @@
 # exp_00 Rig Runbook
 
-This is the workflow for a lab computer with WSL, a **Windows-only** experiment
-computer with no GitHub authentication, and the NAS as the transfer point. WSL
-is used only to prepare the package on the lab computer; it is neither required
-nor used on the experiment computer. Never run the experiment from the NAS, a
-USB drive, or a `\\wsl.localhost` path. Stage code there, then install it
-locally on the experiment computer.
-
-## Validation TODOs
-
-- [ ] On the lab computer, run the optional Windows `-DryRun` check against
-  the NAS videos.
-- [ ] On the experiment computer, run the local-video `-DryRun` check.
-- [ ] Before collection, complete one real dummy-mode session and verify its
-  local and NAS run folders contain experiment data, benchmark data, metadata,
-  and the transcript.
-- [ ] Before interpreting timing data, confirm the T2 photodiode and TTL
-  loopback wiring and record its PASS/FAIL result.
-
-## 1. Prepare a package on the lab computer
-
-In WSL, update both repositories and initialize the MATLAB-tools submodule:
-
-```bash
-MOVIE="$HOME/dev/research/CogCtrlLab/cclab_movie_project"
-BENCH="$HOME/dev/research/research_infra/mat_vs_py_bench"
-
-git -C "$MOVIE" status --short
-git -C "$BENCH" status --short
-git -C "$MOVIE" pull --ff-only
-git -C "$MOVIE" submodule update --init --recursive
-git -C "$BENCH" pull --ff-only
-
-wslpath -w "$MOVIE"
-wslpath -w "$BENCH"
-```
-
-Both `status` commands should be empty before staging. The final two commands
-print Windows paths such as `\\wsl.localhost\NixOS\home\...`; copy those values.
-
-Open **Windows PowerShell** on the same lab computer and create a new,
-date-stamped folder on the NAS. Do not reuse an existing package folder.
-
-```powershell
-$Movie = "\\wsl.localhost\<distro>\home\<user>\...\cclab_movie_project"
-$Bench = "\\wsl.localhost\<distro>\home\<user>\...\mat_vs_py_bench"
-$Package = "\\cns-nas.ucdavis.edu\cclab\shared\experiment_packages\exp00_2026-10-05"
-
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$Movie\stage_rig_package.ps1" `
-  -BenchSource $Bench `
-  -Destination $Package
-```
-
-Expected result: `Portable package created: <NAS path>`. The package must
-contain `cclab_movie_project`, `mat_vs_py_bench`, `Install-CCLabRig.ps1`, and
-`Start-CCLabRig.cmd`.
-
-### Optional lab-computer smoke test
-
-If MATLAB and the NAS videos are reachable from the lab computer, install the
-package to a disposable folder on the Desktop, then run the headless check. It
-opens no PTB window, does not need the EyeLink or NI card, and verifies the
-experiment configuration, pilot pool, and all eight pilot video files.
-`GetFolderPath('Desktop')` resolves the real Desktop even when it is redirected
-into OneDrive.
-
-```powershell
-$Package = "\\cns-nas.ucdavis.edu\cclab\shared\experiment_packages\exp00_2026-10-05"
-$TestRoot = Join-Path ([Environment]::GetFolderPath('Desktop')) 'CCLabRigTest'
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$Package\Install-CCLabRig.ps1" `
-  -InstallRoot $TestRoot
-
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$TestRoot\cclab_movie_project\run_rig.ps1" `
-  -BenchRoot "$TestRoot\mat_vs_py_bench" `
-  -ComputerProfile win_dummy `
-  -VideoSource nas `
-  -VideoRoot "\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset" `
-  -DryRun
-```
-
-Expected final line: `DRY RUN OK: ... (8 videos)`. Delete the Desktop `CCLabRigTest`
-afterward if it was only used for this check.
-
-### Optional lab-computer dummy session
-
-The same Desktop install can run the full workflow without rig hardware. With
-`-ComputerProfile win_dummy` the experiment uses the mouse as gaze, and the
-benchmarks run on the dummy DIO config (`preflight.py --off-rig`, Python T0/T2
-`--dummy`, MATLAB T2 skipped). These benchmark numbers are not timing
-measurements; they only prove the pipeline and output layout. Archive to a test
-folder so dummy runs never mix with collection data.
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$TestRoot\cclab_movie_project\run_rig.ps1" -ComputerProfile win_dummy -VideoSource nas -VideoRoot "\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset" -RunExperiment -SubjectId dummy01 -ArchiveRoot "\\cns-nas.ucdavis.edu\cclab\shared\rig_runs\exp00_dummy"
-```
-
-The benchmarks run first (a PTB flip-test window flashes); then the experiment
-starts. Hold the mouse on the fixation dot to start each trial; ESC ends the
-experiment early.
-
-## 2. Install and run on the experiment computer (Windows only)
-
-### Install code locally
-
-In Windows Explorer, browse to the NAS package folder. On the experiment
-computer, open PowerShell and install directly from that package:
-
-```powershell
-$Package = "\\cns-nas.ucdavis.edu\cclab\shared\experiment_packages\exp00_2026-10-05"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$Package\Install-CCLabRig.ps1"
-```
-
-This copies code to `C:\CCLabRig`. It does not require GitHub credentials,
-WSL, a Linux shell, or a WSL-mounted NAS path.
-
-### Put the pilot videos on the local disk
-
-For a real run, use a local video copy. The expected root is:
+How code gets from the lab computer to the experiment computer, and how data
+comes back. Every step is a double-click or one typed command; nothing needs
+to be copied and pasted.
 
 ```text
-C:\cclab_data\video_ebm_dataset\video_all\
+lab computer (WSL)  --stage-->  NAS experiment_packages\exp00_<date>\
+                                   |
+experiment computer  <--install----+
+  1_Setup_Rig  ->  2_Run_Benchmarks  ->  3_Run_Experiment
+                                   |
+NAS rig_runs\exp00\<timestamp>_<step>\  <--results copied automatically
 ```
 
-Copy the eight pilot-pool videos from the NAS without transferring the full
-dataset:
+Never run the experiment from the NAS, a USB drive, or a `\\wsl.localhost`
+path. The installer copies the code to the experiment computer's local disk.
 
-```powershell
-$Source = "\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset\video_all"
-$Destination = "C:\cclab_data\video_ebm_dataset\video_all"
-$Pool = Import-Csv "C:\CCLabRig\cclab_movie_project\video_ebm_dataset\pilot_pool.csv"
+## Before the first session
 
-New-Item -ItemType Directory -Force -Path $Destination | Out-Null
-foreach ($video in $Pool.filename) {
-  Copy-Item -LiteralPath (Join-Path $Source $video) -Destination $Destination -Force
-}
-Get-ChildItem $Destination -Filter *.mp4 | Measure-Object
-```
+- [ ] **Which rig is which?** The benchmarks and reward/TTL lines use
+  `rig-right.txt` for both `lab_120` and `lab_121`. If one of them is wired as
+  the left rig, this must be fixed before collecting data on it.
+- [ ] **Internet on the experiment computer.** Step 1 (setup) downloads Python
+  3.11 and the benchmark packages the first time it runs. If the experiment
+  computer is offline, setup will fail at "Install Python benchmark environment".
+- [ ] **MATLAB on PATH.** On each computer, MATLAB must start from a plain
+  PowerShell or Command Prompt window by typing `matlab`.
+- [ ] Before interpreting timing data, confirm the photodiode and TTL loopback
+  wiring and record the PASS/FAIL result.
 
-Use the full 600-video local copy only if a later experiment needs it.
+## Part A — Lab computer: put a package on the NAS
 
-### Headless preflight
+1. Open the WSL terminal and go to the project:
 
-Before using the rig, confirm the installed package finds all eight videos:
+   ```bash
+   cd ~/dev/research/CogCtrlLab/cclab_movie_project
+   ```
 
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\CCLabRig\cclab_movie_project\run_rig.ps1" `
-  -BenchRoot "C:\CCLabRig\mat_vs_py_bench" `
-  -ComputerProfile lab_120 `
-  -VideoSource local `
-  -DryRun
-```
+2. Type:
 
-Use `lab_121` instead if that is the physical rig. Do not use `win_dummy` for
-a real EyeLink/reward run. The expected result is `DRY RUN OK`.
+   ```bash
+   ./stage_to_nas.sh
+   ```
 
-### Run the session
+   It refuses to run if either repository has uncommitted changes (commit
+   them first), pulls both repositories, and copies everything to a new folder
+   on the NAS.
 
-Close other stimulus applications, confirm the EyeLink host, reward hardware,
-photodiode, and TTL loopback are connected, then double-click:
+   **Expected last line:**
+   `Portable package created: \\cns-nas.ucdavis.edu\cclab\shared\experiment_packages\exp00_<date>`
 
-```text
-C:\CCLabRig\Start-CCLabRig.cmd
-```
+   Staging twice on the same day creates `exp00_<date>_2`, `_3`, and so on. A
+   package folder is never reused. Note the folder name it printed.
 
-Enter a subject ID of 1-8 letters, numbers, or underscores, then select the
-physical rig profile (`lab_120` or `lab_121`). When asked for an archive
-location, enter a NAS collection root, for example:
+## Part B (optional) — Test the package on the lab computer
 
-```text
-\\cns-nas.ucdavis.edu\cclab\shared\rig_runs\exp00
-```
+This runs the whole workflow without rig hardware: the mouse acts as gaze and
+the benchmarks use synthetic hardware. Benchmark numbers from this test are
+**not** timing measurements.
 
-The launcher runs the Python and MATLAB timing benchmarks first, then the
-MATLAB pilot. A failed benchmark stops the launcher before the experiment
-starts, so fix the cause (or rerun with `-SkipBench`) before the subject is
-seated. It creates one timestamped subfolder under both the local
-`C:\CCLabRig\data\runs\` root and the archive root. Keep the local folder
-until the NAS copy has been checked.
+1. In File Explorer, open the package folder from Part A
+   (`\\cns-nas.ucdavis.edu\cclab\shared\experiment_packages\exp00_<date>`).
+2. Double-click **`Install-CCLabRig.cmd`**. Windows may first print
+   "UNC paths are not supported"; that is harmless. At
+   `Install to [C:\CCLabRig]`, type `desktop` and press Enter. The new
+   `Desktop\CCLabRig` folder opens.
+3. Double-click **`1_Setup_Rig.cmd`**. At the rig profile prompt, type
+   `win_dummy`. Expected: `SETUP OK`.
+4. Double-click **`2_Run_Benchmarks.cmd`**. Press Enter for the profile.
+   At `Copy results to`, type
+   `\\cns-nas.ucdavis.edu\cclab\shared\rig_runs\exp00_dummy` so test runs
+   never mix with collection data. Expected: `BENCHMARKS DONE`.
+5. Double-click **`3_Run_Experiment.cmd`**. Subject ID `dummy01`, Enter for
+   the profile, and the same `exp00_dummy` folder. Hold the mouse on the
+   fixation dot to start each trial; ESC ends early. Expected: `EXPERIMENT DONE`.
 
-## 3. Recover from common failures
+Delete `Desktop\CCLabRig` afterwards if you no longer need it.
+
+## Part C — Experiment computer
+
+### 1. Install (each time there is a new package)
+
+1. In File Explorer, open the newest package folder under
+   `\\cns-nas.ucdavis.edu\cclab\shared\experiment_packages\`.
+2. Double-click **`Install-CCLabRig.cmd`** and press Enter to accept
+   `C:\CCLabRig`. Expected: `INSTALL OK`, and the `C:\CCLabRig` folder opens.
+
+Reinstalling over an existing `C:\CCLabRig` replaces the code exactly and
+keeps `C:\CCLabRig\data\runs` and the saved rig profile.
+
+### 2. Set up (after each install)
+
+Double-click **`C:\CCLabRig\1_Setup_Rig.cmd`** and enter the rig profile
+(`lab_120` or `lab_121`). It is remembered for steps 3 and 4. Setup:
+
+- copies the eight pilot videos from the NAS to
+  `C:\cclab_data\video_ebm_dataset\video_all\` (skips ones already there),
+- installs the Python benchmark environment,
+- runs the hardware preflight (NI-DAQmx, PCIe-6351, displays),
+- checks MATLAB can load the experiment configuration and all pilot videos.
+
+Expected: `SETUP OK`. On `SETUP FAILED`, see Part E.
+
+### 3. Benchmarks (before the session)
+
+Confirm the photodiode is on the flashing corner and the TTL loopback is
+connected, then double-click **`C:\CCLabRig\2_Run_Benchmarks.cmd`**. Press
+Enter twice to accept the saved profile and the NAS results folder
+`\\cns-nas.ucdavis.edu\cclab\shared\rig_runs\exp00`.
+
+It takes about five minutes. Flashing squares on the stimulus monitor are the
+test. Expected: `BENCHMARKS DONE`.
+
+### 4. Experiment
+
+Close other stimulus applications and confirm the EyeLink host and reward
+hardware are connected. Double-click **`C:\CCLabRig\3_Run_Experiment.cmd`**,
+enter the subject ID (1-8 letters, numbers, or underscores), then press Enter
+twice for the saved profile and NAS results folder.
+
+Keys: `ESC` quit, `PageUp` pause, `PageDown` resume. Expected:
+`EXPERIMENT DONE`.
+
+Steps 3 and 4 are independent: either can be rerun on its own, and each run
+gets its own results folder.
+
+## Part D — Get the data back
+
+Each run is saved locally first, in `C:\CCLabRig\data\runs\<timestamp>_<step>\`,
+then copied to the NAS at `\\cns-nas.ucdavis.edu\cclab\shared\rig_runs\exp00\`.
+The local copy is never deleted automatically; keep it until you have checked
+the NAS copy.
+
+| Folder suffix | Contains |
+| --- | --- |
+| `_setup` | `logs\`, `run_metadata.json` |
+| `_bench` | `benchmark\` (raw `.npy`/`.csv` samples, JSON summaries), `logs\`, `run_metadata.json` |
+| `_exp` | `experiment\` (EDF/MAT files), `logs\`, `run_metadata.json` |
+
+For analysis, in File Explorer copy the whole timestamped folder from the NAS
+`rig_runs\exp00` to your analysis location. Keep each folder intact: the data,
+metadata, and logs belong together.
+
+## Part E — When something fails
+
+Every launcher ends with a short status line and pauses so the error stays on
+screen. The full log is `logs\runner_transcript.txt` in the newest run folder
+under `C:\CCLabRig\data\runs\`.
 
 | Symptom | Check and fix |
 | --- | --- |
-| `matlab.exe not found` | In PowerShell run `where.exe matlab`. If empty, add the installed MATLAB `bin` folder to the system or user `PATH`, open a new PowerShell window, then rerun. |
-| `video_all not found` | Confirm `C:\cclab_data\video_ebm_dataset\video_all` exists. Rerun the eight-video copy block. For diagnosis only, run the dry check with `-VideoSource nas -VideoRoot "\\cns-nas...\video_ebm_dataset"`; do not stream a real session from the NAS. |
-| `Missing pilot video` | Read the filename in the error, then copy that file from the NAS `video_all` folder to the local `video_all` folder. |
-| `cclab MATLAB tools not found` | Confirm `C:\CCLabRig\cclab_movie_project\Code\cclab-matlab-tools\cclabInitDIO.m` exists. If absent, the package was staged before the Git submodule was initialized; rebuild the package on the lab computer. |
-| UV installation fails | Run `winget install --id astral-sh.uv -e`, open a new PowerShell window, then rerun. |
-| Benchmark preflight fails | Read `C:\CCLabRig\data\runs\<timestamp>\logs\runner_transcript.txt`. Typical causes are missing NI-DAQmx, no PCIe-6351 detected, wrong screen, or no photodiode/TTL loopback. Do not treat a failed T2 run as usable timing evidence. |
-| MATLAB/PTB screen issue | Verify display numbering with the rig’s PTB setup. `exp_00` uses screen 2 for `lab_120`/`lab_121`; the benchmark uses the runner’s `-Screen 2` default. Keep them aligned. Do not set `SkipSyncTests=1` for a real timing measurement. |
-| Run stops partway through | Do not delete anything. The local run folder contains `logs/runner_transcript.txt`; experiment crash handling writes partial data and `error_log.txt` under `experiment/Output_exp00_pilot/`. |
-| NAS archive copy fails | The local run folder is retained. Restore NAS connectivity, then copy that complete timestamped folder manually with `robocopy /E /Z /R:3 /W:5`. |
+| `MATLAB is not on PATH` | Add the MATLAB `bin` folder to the user `PATH` (Windows Settings → "Edit environment variables for your account"), then rerun the launcher. |
+| `Pilot video on the NAS not found` | The NAS is not reachable or the dataset moved. Open `\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset\video_all` in File Explorer to check, then rerun setup. |
+| `Missing pilot video` / `video_all not found` | Rerun `1_Setup_Rig.cmd`; it copies whatever is missing. |
+| `cclab MATLAB tools not found` | The package was staged without the MATLAB-tools submodule. Stage a new package with `./stage_to_nas.sh` (it initializes the submodule) and reinstall. |
+| UV installation fails | Install UV from <https://docs.astral.sh/uv/> (or `winget install --id astral-sh.uv -e`), close the window, rerun setup. |
+| "Install Python benchmark environment" fails | Usually no internet. If it mentions the lockfile, the package is out of date: stage and install a new one. |
+| Preflight `FAIL` lines | Typical causes: NI-DAQmx driver missing, PCIe-6351 not detected (check NI MAX), only one display connected. Fix and rerun setup. |
+| Benchmarks stop partway | Do not treat a failed run as timing evidence. Check the photodiode, TTL loopback, and that the stimulus monitor is screen 2. Do not set `SkipSyncTests=1` for a real timing measurement. |
+| Experiment stops partway | Do not delete anything. Partial data and `error_log.txt` are under `experiment\Output_exp00_pilot\` in the `_exp` run folder. |
+| NAS copy fails at the end | The local run folder is complete. Once the NAS is back, copy that whole folder to `rig_runs\exp00` in File Explorer. |
 
-## 4. Return data through the NAS
+## Command-line reference
 
-The preferred path is experiment computer -> NAS -> lab computer -> personal
-computer. The experiment launcher already performs the first hop when an
-archive root is supplied.
+The launchers call `cclab_movie_project\run_rig.ps1`, which can also be run
+directly from PowerShell:
 
-On the experiment computer, verify the archive has the expected directories:
+| Launcher | Equivalent |
+| --- | --- |
+| `1_Setup_Rig.cmd` | `run_rig.ps1 -ComputerProfile lab_120 -Setup` |
+| `2_Run_Benchmarks.cmd` | `run_rig.ps1 -ComputerProfile lab_120 -ArchiveRoot <NAS root>` |
+| `3_Run_Experiment.cmd` | `run_rig.ps1 -ComputerProfile lab_120 -RunExperiment -SkipBench -SubjectId <ID> -ArchiveRoot <NAS root>` |
 
-```text
-<archive root>\<timestamp>\experiment\
-<archive root>\<timestamp>\benchmark\
-<archive root>\<timestamp>\logs\
-<archive root>\<timestamp>\run_metadata.json
-```
-
-On the lab computer, make a local read-only working copy for analysis:
-
-```powershell
-$Run = "2026-10-05_143000"  # replace with the actual timestamp
-$Source = "\\cns-nas.ucdavis.edu\cclab\shared\rig_runs\exp00\$Run"
-$Destination = "C:\CCLabData\exp00\$Run"
-robocopy $Source $Destination /E /Z /R:3 /W:5 /COPY:DAT
-if ($LASTEXITCODE -gt 7) { throw "Copy failed: $LASTEXITCODE" }
-```
-
-On a personal computer, copy the same NAS run folder to an analysis location
-with the same `robocopy` command, or download it through the lab-approved NAS
-client. Preserve the entire timestamped folder: the EDF/MAT files, raw `.npy`
-and `.csv` benchmark samples, JSON summaries, metadata, and logs belong
+`-DryRun` performs only the MATLAB configuration and video check.
+`-VideoSource nas -VideoRoot <path>` reads videos from the NAS for diagnosis;
+do not stream a real session from the NAS.

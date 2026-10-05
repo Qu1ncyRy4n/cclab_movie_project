@@ -62,21 +62,21 @@ the switch block with its `dummymode` and `filepath`. Lab rigs auto-get
 
 ### Windows rig runner
 
-`run_rig.ps1` installs UV with `winget` if needed, runs the current `exp_00`
-MATLAB pilot, then runs the Python/MATLAB benchmark arms against the same display
-and rig config. Every run is collected in one local timestamped folder under
-`C:\CCLabRig\data\runs\`.
+`run_rig.ps1` is the single engine behind the rig launchers. It has one mode per
+step, and every run gets its own local timestamped folder under
+`C:\CCLabRig\data\runs\` (suffixed `_setup`, `_bench`, or `_exp`):
 
 ```powershell
-Set-ExecutionPolicy -Scope Process Bypass
-.\run_rig.ps1 -BenchRoot C:\cclab\mat_vs_py_bench -ComputerProfile lab_120 -RunExperiment
+.\run_rig.ps1 -ComputerProfile lab_120 -Setup                      # videos, Python env, preflight, video check
+.\run_rig.ps1 -ComputerProfile lab_120                             # timing benchmarks only
+.\run_rig.ps1 -ComputerProfile lab_120 -RunExperiment -SkipBench -SubjectId M01   # exp_00 only
 ```
 
-Pass `-RunExperiment` to launch the experiment. The runner defaults to screen
-`2`, the rig display; override it only when the display mapping is known.
-It expects MATLAB, UV, NI-DAQmx, Psychtoolbox, the EyeLink toolbox, and the
-`Code/cclab-matlab-tools` submodule to be installed. The runner does not launch
-the separate PsychoPy template; it does execute the Python timing benchmarks.
+The runner defaults to screen `2`, the rig display; override it only when the
+display mapping is known. It installs UV with `winget` if needed and expects
+MATLAB, NI-DAQmx, Psychtoolbox, the EyeLink toolbox, and the
+`Code/cclab-matlab-tools` submodule. The runner does not launch the separate
+PsychoPy template; it does execute the Python timing benchmarks.
 
 ### Portable Windows package
 
@@ -91,10 +91,10 @@ On a development machine, stage both repositories to a NAS folder or USB drive:
 
 On the experiment computer, run `Install-CCLabRig.ps1` from that package. It
 copies both repositories locally to `C:\CCLabRig`; do not run experiments from
-the NAS or USB. The experimenter then double-clicks `C:\CCLabRig\Start-CCLabRig.cmd`,
-enters an optional NAS/USB archive folder, and follows the prompts. The local
-run folder includes `experiment/`, `benchmark/`, `logs/`, and `run_metadata.json`;
-a successful optional archive copy never deletes local data.
+the NAS or USB. The experimenter then double-clicks, in order,
+`1_Setup_Rig.cmd`, `2_Run_Benchmarks.cmd`, and `3_Run_Experiment.cmd`. Each run
+folder includes `logs/` and `run_metadata.json` plus `benchmark/` or
+`experiment/`; a successful optional archive copy never deletes local data.
 
 ## Trial state machine (RUN_ ... .m)
 
