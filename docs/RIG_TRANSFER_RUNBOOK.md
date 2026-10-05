@@ -10,7 +10,7 @@ lab computer (WSL)  --stage-->  NAS experiment_packages\exp00_<date>\
 experiment computer  <--install----+
   1_Setup_Rig  ->  2_Run_Benchmarks  ->  3_Run_Experiment
                                    |
-NAS rig_runs\exp00\<timestamp>_<step>\  <--results copied automatically
+NAS experiment_packages\runs\exp00\<timestamp>_<step>\  <--results copied automatically
 ```
 
 Never run the experiment from the NAS, a USB drive, or a `\\wsl.localhost`
@@ -66,7 +66,7 @@ the benchmarks use synthetic hardware. Benchmark numbers from this test are
    `win_dummy`. Expected: `SETUP OK`.
 4. Double-click **`2_Run_Benchmarks.cmd`**. Press Enter for the profile.
    At `Copy results to`, type
-   `\\cns-nas.ucdavis.edu\cclab\shared\rig_runs\exp00_dummy` so test runs
+   `\\cns-nas.ucdavis.edu\cclab\shared\experiment_packages\runs\exp00_dummy` so test runs
    never mix with collection data. Expected: `BENCHMARKS DONE`.
 5. Double-click **`3_Run_Experiment.cmd`**. Subject ID `dummy01`, Enter for
    the profile, and the same `exp00_dummy` folder. Hold the mouse on the
@@ -122,7 +122,7 @@ Expected: `SETUP OK`. On `SETUP FAILED`, see Part E.
 Confirm the photodiode is on the flashing corner and the TTL loopback is
 connected, then double-click **`C:\CCLabRig\2_Run_Benchmarks.cmd`**. Press
 Enter twice to accept the saved profile and the NAS results folder
-`\\cns-nas.ucdavis.edu\cclab\shared\rig_runs\exp00`.
+`\\cns-nas.ucdavis.edu\cclab\shared\experiment_packages\runs\exp00`.
 
 It takes about five minutes. Flashing squares on the stimulus monitor are the
 test. Expected: `BENCHMARKS DONE`.
@@ -143,7 +143,7 @@ gets its own results folder.
 ## Part D — Get the data back
 
 Each run is saved locally first, in `C:\CCLabRig\data\runs\<timestamp>_<step>\`,
-then copied to the NAS at `\\cns-nas.ucdavis.edu\cclab\shared\rig_runs\exp00\`.
+then copied to the NAS at `\\cns-nas.ucdavis.edu\cclab\shared\experiment_packages\runs\exp00\`.
 The local copy is never deleted automatically; keep it until you have checked
 the NAS copy.
 
@@ -154,7 +154,7 @@ the NAS copy.
 | `_exp` | `experiment\` (EDF/MAT files), `logs\`, `run_metadata.json` |
 
 For analysis, in File Explorer copy the whole timestamped folder from the NAS
-`rig_runs\exp00` to your analysis location. Keep each folder intact: the data,
+`experiment_packages\runs\exp00` to your analysis location. Keep each folder intact: the data,
 metadata, and logs belong together.
 
 ## Part E — When something fails
@@ -174,7 +174,7 @@ under `C:\CCLabRig\data\runs\`.
 | Preflight `FAIL` lines | Typical causes: NI-DAQmx driver missing, PCIe-6351 not detected (check NI MAX), only one display connected. Fix and rerun setup. |
 | Benchmarks stop partway | Do not treat a failed run as timing evidence. Check the photodiode, TTL loopback, and that the stimulus monitor is screen 2. Do not set `SkipSyncTests=1` for a real timing measurement. |
 | Experiment stops partway | Do not delete anything. Partial data and `error_log.txt` are under `experiment\Output_exp00_pilot\` in the `_exp` run folder. |
-| NAS copy fails at the end | The local run folder is complete. Once the NAS is back, copy that whole folder to `rig_runs\exp00` in File Explorer. |
+| NAS copy fails at the end | The local run folder is complete. Once the NAS is back, copy that whole folder to `experiment_packages\runs\exp00` in File Explorer. |
 
 ## Command-line reference
 

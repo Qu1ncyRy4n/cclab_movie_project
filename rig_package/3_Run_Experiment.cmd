@@ -25,7 +25,7 @@ set "INPUT="
 set /p "INPUT=Rig profile [%RIG_PROFILE%]: "
 if not "%INPUT%"=="" set "RIG_PROFILE=%INPUT%"
 
-set "ARCHIVE_ROOT=\\cns-nas.ucdavis.edu\cclab\shared\rig_runs\exp00"
+set "ARCHIVE_ROOT=\\cns-nas.ucdavis.edu\cclab\shared\experiment_packages\runs\exp00"
 set "INPUT="
 set /p "INPUT=Copy results to [%ARCHIVE_ROOT%] (type local to skip): "
 if /i "%INPUT%"=="local" (set "ARCHIVE_ROOT=") else if not "%INPUT%"=="" set "ARCHIVE_ROOT=%INPUT%"
