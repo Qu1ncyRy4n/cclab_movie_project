@@ -60,6 +60,42 @@ the switch block with its `dummymode` and `filepath`. Lab rigs auto-get
 4. If real EyeLink: does camera setup / 9-point calibration (HV9) before start.
 5. Keys during run: `ESC` quit, `PageUp` pause, `PageDown` resume.
 
+### Windows rig runner
+
+`run_rig.ps1` installs UV with `winget` if needed, runs the current `exp_00`
+MATLAB pilot, then runs the Python/MATLAB benchmark arms against the same display
+and rig config. Every run is collected in one local timestamped folder under
+`C:\CCLabRig\data\runs\`.
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+.\run_rig.ps1 -BenchRoot C:\cclab\mat_vs_py_bench -ComputerProfile lab_120 -RunExperiment
+```
+
+Pass `-RunExperiment` to launch the experiment. The runner defaults to screen
+`2`, the rig display; override it only when the display mapping is known.
+It expects MATLAB, UV, NI-DAQmx, Psychtoolbox, the EyeLink toolbox, and the
+`Code/cclab-matlab-tools` submodule to be installed. The runner does not launch
+the separate PsychoPy template; it does execute the Python timing benchmarks.
+
+### Portable Windows package
+
+The full lab-computer -> NAS -> experiment-computer -> NAS return workflow is
+in [`docs/RIG_TRANSFER_RUNBOOK.md`](docs/RIG_TRANSFER_RUNBOOK.md).
+
+On a development machine, stage both repositories to a NAS folder or USB drive:
+
+```powershell
+.\stage_rig_package.ps1 -BenchSource C:\path\to\mat_vs_py_bench -Destination E:\CCLabRigPackage
+```
+
+On the experiment computer, run `Install-CCLabRig.ps1` from that package. It
+copies both repositories locally to `C:\CCLabRig`; do not run experiments from
+the NAS or USB. The experimenter then double-clicks `C:\CCLabRig\Start-CCLabRig.cmd`,
+enters an optional NAS/USB archive folder, and follows the prompts. The local
+run folder includes `experiment/`, `benchmark/`, `logs/`, and `run_metadata.json`;
+a successful optional archive copy never deletes local data.
+
 ## Trial state machine (RUN_ ... .m)
 
 `while ~break_out` loop switching on `state`:
