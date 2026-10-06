@@ -129,7 +129,7 @@ cclab.nTrials = 20;
 cclab.durations.t_fixation_fp     = 0.85; % required hold before interleave starts
 cclab.durations.t_trialend        = 2;    % ITI (blank). 2 or 3 — exploratory, see segDur.
 cclab.durations.t_reward          = 1;    % reward image on screen
-cclab.ttlPulseMs                  = 10;   % wide enough for downstream acquisition inputs
+cclab.ttlPulseMs                  = 50;   % downstream acquisition input requires wider markers
 
 %% Fixation / Window / Reward
 cclab.windowSize = 3;      % acceptance window half-width (deg)
