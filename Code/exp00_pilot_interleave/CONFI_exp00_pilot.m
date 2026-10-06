@@ -99,6 +99,11 @@ cclab.poolFile = fullfile(here, '..', '..', 'video_ebm_dataset', 'pilot_pool.csv
 cclab.useFixedSeed = false;
 cclab.randomSeed   = 1;
 
+% These independent overrides allow software, EyeLink, and neural-I/O checks
+% without changing the machine profile. Leave unset to use the rig default.
+cclab.useEyelink  = environmentFlag('CCLAB_USE_EYELINK', cclab.dummymode == 0);
+cclab.useNeuralIO = environmentFlag('CCLAB_USE_NEURAL_IO', cclab.dummymode == 0);
+
 %% ---------------- exp_00 design ----------------
 % Length of one interleaved chunk (s). 2 or 3 — both are worth trying;
 % this is exploratory, not a settled parameter.
@@ -133,7 +138,7 @@ cclab.ttlPulseMs                  = 50;   % downstream acquisition input require
 
 %% Fixation / Window / Reward
 cclab.windowSize = 3;      % acceptance window half-width (deg)
-cclab.fpr        = 0.5;    % fixation dot radius (deg)
+cclab.fpr        = 0.25;   % fixation dot radius (deg)
 cclab.fp_x       = 0;
 cclab.fp_y       = 0;
 cclab.fp_color   = [0 0 0];
@@ -158,4 +163,22 @@ switch lower(cclab.whichMonkey)
     otherwise,     cclab.rewardImageFile = 'isaac_reward.png';
 end
 cclab.rewardImageDimDeg = 6;
+end
+
+function value = environmentFlag(name, defaultValue)
+rawValue = lower(strtrim(getenv(name)));
+if isempty(rawValue)
+    value = defaultValue;
+    return
+end
+
+switch rawValue
+    case {'1', 'true', 'yes', 'on'}
+        value = true;
+    case {'0', 'false', 'no', 'off'}
+        value = false;
+    otherwise
+        error('CONFI:invalidEnvironmentFlag', ...
+            '%s must be one of on/off, true/false, yes/no, or 1/0.', name);
+end
 end

@@ -13,7 +13,7 @@
       devShells = forAllSystems (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
-          python = pkgs.python3.withPackages (ps: with ps; [
+          python = pkgs.python312.withPackages (ps: with ps; [
             # general numerical / plotting
             numpy
             scipy
@@ -41,6 +41,17 @@
               python
               pkgs.ruff          # linter + formatter
               pkgs.basedpyright  # language server
+            ];
+          };
+
+          qc = pkgs.mkShell {
+            packages = [
+              (pkgs.python312.withPackages (ps: with ps; [
+                numpy
+                pandas
+                matplotlib
+                ipykernel
+              ]))
             ];
           };
         });

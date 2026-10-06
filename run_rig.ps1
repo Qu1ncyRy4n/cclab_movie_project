@@ -31,6 +31,10 @@ param(
     [int]$Flips = 300,
     [ValidateSet('lab_120', 'lab_121', 'win_dummy', 'dev_wsl')]
     [string]$ComputerProfile = 'lab_120',
+    [ValidateSet('auto', 'on', 'off')]
+    [string]$EyeTracking = 'auto',
+    [ValidateSet('auto', 'on', 'off')]
+    [string]$NeuralIO = 'auto',
     [switch]$Setup,
     [switch]$RunExperiment,
     [switch]$SkipBench,
@@ -187,6 +191,10 @@ if (-not $DryRun) {
 }
 $env:CCLAB_COMPUTER_NAME = $ComputerProfile
 $env:CCLAB_VIDEO_SOURCE = $VideoSource
+if ($EyeTracking -eq 'auto') { Remove-Item Env:CCLAB_USE_EYELINK -ErrorAction SilentlyContinue }
+else { $env:CCLAB_USE_EYELINK = $EyeTracking }
+if ($NeuralIO -eq 'auto') { Remove-Item Env:CCLAB_USE_NEURAL_IO -ErrorAction SilentlyContinue }
+else { $env:CCLAB_USE_NEURAL_IO = $NeuralIO }
 # -Setup copies the pilot videos to $LocalVideoRoot, so local runs read from the
 # same place on every profile.
 if ($VideoRoot) { $env:CCLAB_VIDEO_ROOT = $VideoRoot }
@@ -205,6 +213,8 @@ try {
         started_local = (Get-Date).ToString('o')
         computer_name = $env:COMPUTERNAME
         computer_profile = $ComputerProfile
+        eye_tracking = $EyeTracking
+        neural_io = $NeuralIO
         bench_dummy = $benchDummy
         video_source = $VideoSource
         screen = $Screen

@@ -27,6 +27,7 @@ function RUN_exp00_pilot(subID)
 close all
 
 useRealEyelink = false;
+useNeuralIO = false;
 dioInitialized = false;
 
 try
@@ -108,8 +109,10 @@ try
     fixWin_px = round(fixWindow_deg * ppd);
 
     %% 4) Digital I/O (reward pump + TTL sync)
-    useRealEyelink = (dummymode_EYE == 0);
-    if useRealEyelink
+    useRealEyelink = cclab.useEyelink;
+    useNeuralIO = cclab.useNeuralIO;
+    fprintf('EyeLink enabled: %d; neural I/O enabled: %d\n', useRealEyelink, useNeuralIO);
+    if useNeuralIO
         cclabInitDIO('rig-right');
         dioInitialized = true;
     end
@@ -353,10 +356,10 @@ try
                     segStartA = mA.startS + (si - 1) * cclab.segDur;
                     segStartB = mB.startS + (si - 1) * cclab.segDur;
                     aborted = playOneSegment(window, mA, segStartA, cclab.segDur, ...
-                        total_trials, si, 'A', useRealEyelink, escKey, cclab.ttlPulseMs);
+                        total_trials, si, 'A', useRealEyelink, useNeuralIO, escKey, cclab.ttlPulseMs);
                     if aborted, break; end
                     aborted = playOneSegment(window, mB, segStartB, cclab.segDur, ...
-                        total_trials, si, 'B', useRealEyelink, escKey, cclab.ttlPulseMs);
+                        total_trials, si, 'B', useRealEyelink, useNeuralIO, escKey, cclab.ttlPulseMs);
                     if aborted, break; end
                 end
 
@@ -390,7 +393,7 @@ try
 
                 rAmount = baseReward;
                 if randReward && (rand() > randPer), rAmount = 2 * baseReward; end
-                if useRealEyelink, cclabReward(rAmount, 1, 1000); end
+                if useNeuralIO, cclabReward(rAmount, 1, 1000); end
                 rewardOnMs = 1000 * (GetSecs - trial_start_time);
                 WaitSecs(t_reward);
 
@@ -531,7 +534,7 @@ end
 end
 
 % ---------------------------------------------------------------------------
-function aborted = playOneSegment(window, m, segStart, segDur, trialNum, segIdx, which, useRealEyelink, escKey, ttlPulseMs)
+function aborted = playOneSegment(window, m, segStart, segDur, trialNum, segIdx, which, useRealEyelink, useNeuralIO, escKey, ttlPulseMs)
 % Seek m to segStart, play for segDur, draw every frame. Returns true if
 % ESC was pressed mid-segment.
 aborted = false;
@@ -555,6 +558,8 @@ while (GetSecs - segT0) < segDur
     if ~segOnMarked
         if useRealEyelink
             Eyelink('Message', 'SegOn_%d_%d_%s', trialNum, segIdx, which);
+        end
+        if useNeuralIO
             fprintf('TTL A: trial %d segment %d %s, %g ms\n', trialNum, segIdx, which, ttlPulseMs);
             cclabPulse('A', ttlPulseMs);
         end
@@ -572,6 +577,8 @@ end
 Screen('PlayMovie', m.ptr, 0);
 if useRealEyelink
     Eyelink('Message', 'SegOff_%d_%d_%s', trialNum, segIdx, which);
+end
+if useNeuralIO
     fprintf('TTL B: trial %d segment %d %s, %g ms\n', trialNum, segIdx, which, ttlPulseMs);
     cclabPulse('B', ttlPulseMs);
 end

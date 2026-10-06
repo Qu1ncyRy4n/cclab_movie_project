@@ -25,6 +25,13 @@ set "INPUT="
 set /p "INPUT=Rig profile [%RIG_PROFILE%]: "
 if not "%INPUT%"=="" set "RIG_PROFILE=%INPUT%"
 
+set "EYE_TRACKING=auto"
+set /p "INPUT=Eye tracking [%EYE_TRACKING%] (auto/on/off): "
+if not "%INPUT%"=="" set "EYE_TRACKING=%INPUT%"
+set "NEURAL_IO=auto"
+set /p "INPUT=Neural I/O and reward [%NEURAL_IO%] (auto/on/off): "
+if not "%INPUT%"=="" set "NEURAL_IO=%INPUT%"
+
 set "ARCHIVE_ROOT=\\cns-nas.ucdavis.edu\cclab\shared\experiment_packages\runs\exp00"
 set "INPUT="
 set /p "INPUT=Copy results to [%ARCHIVE_ROOT%] (type local to skip): "
@@ -32,7 +39,7 @@ if /i "%INPUT%"=="local" (set "ARCHIVE_ROOT=") else if not "%INPUT%"=="" set "AR
 set "ARCHIVE_ARG="
 if defined ARCHIVE_ROOT set ARCHIVE_ARG=-ArchiveRoot "%ARCHIVE_ROOT%"
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%RUNNER%" -ComputerProfile "%RIG_PROFILE%" -RunExperiment -SkipBench -SubjectId "%SUBJECT_ID%" %ARCHIVE_ARG%
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%RUNNER%" -ComputerProfile "%RIG_PROFILE%" -EyeTracking "%EYE_TRACKING%" -NeuralIO "%NEURAL_IO%" -RunExperiment -SkipBench -SubjectId "%SUBJECT_ID%" %ARCHIVE_ARG%
 set "STATUS=%ERRORLEVEL%"
 echo.
 if "%STATUS%"=="0" (echo EXPERIMENT DONE.) else (
