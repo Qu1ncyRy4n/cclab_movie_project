@@ -353,10 +353,10 @@ try
                     segStartA = mA.startS + (si - 1) * cclab.segDur;
                     segStartB = mB.startS + (si - 1) * cclab.segDur;
                     aborted = playOneSegment(window, mA, segStartA, cclab.segDur, ...
-                        total_trials, si, 'A', useRealEyelink, escKey);
+                        total_trials, si, 'A', useRealEyelink, escKey, cclab.ttlPulseMs);
                     if aborted, break; end
                     aborted = playOneSegment(window, mB, segStartB, cclab.segDur, ...
-                        total_trials, si, 'B', useRealEyelink, escKey);
+                        total_trials, si, 'B', useRealEyelink, escKey, cclab.ttlPulseMs);
                     if aborted, break; end
                 end
 
@@ -531,7 +531,7 @@ end
 end
 
 % ---------------------------------------------------------------------------
-function aborted = playOneSegment(window, m, segStart, segDur, trialNum, segIdx, which, useRealEyelink, escKey)
+function aborted = playOneSegment(window, m, segStart, segDur, trialNum, segIdx, which, useRealEyelink, escKey, ttlPulseMs)
 % Seek m to segStart, play for segDur, draw every frame. Returns true if
 % ESC was pressed mid-segment.
 aborted = false;
@@ -555,7 +555,8 @@ while (GetSecs - segT0) < segDur
     if ~segOnMarked
         if useRealEyelink
             Eyelink('Message', 'SegOn_%d_%d_%s', trialNum, segIdx, which);
-            cclabPulse('A');
+            fprintf('TTL A: trial %d segment %d %s, %g ms\n', trialNum, segIdx, which, ttlPulseMs);
+            cclabPulse('A', ttlPulseMs);
         end
         segOnMarked = true;
         segT0 = flipTime;
@@ -571,7 +572,8 @@ end
 Screen('PlayMovie', m.ptr, 0);
 if useRealEyelink
     Eyelink('Message', 'SegOff_%d_%d_%s', trialNum, segIdx, which);
-    cclabPulse('B');
+    fprintf('TTL B: trial %d segment %d %s, %g ms\n', trialNum, segIdx, which, ttlPulseMs);
+    cclabPulse('B', ttlPulseMs);
 end
 end
 
