@@ -206,6 +206,14 @@ if (-not $matlab) {
 
 $movieRoot = (Resolve-Path -LiteralPath $scriptRoot)
 $benchRoot = (Resolve-Path -LiteralPath $BenchRoot)
+$sourceExperimentDir = Join-Path $movieRoot 'Code\exp00_pilot_interleave'
+$approvedPlanMetadata = $null
+$approvedPlanMetadataFile = $null
+if ($FullSession) {
+    $approvedPlanMetadataFile = Join-Path $sourceExperimentDir 'approved_session_plan_metadata.json'
+    Require-Path $approvedPlanMetadataFile 'Approved session-plan seed metadata'
+    $approvedPlanMetadata = Get-Content -LiteralPath $approvedPlanMetadataFile -Raw | ConvertFrom-Json
+}
 $runDir = Join-Path $RunRoot $SessionId
 if (Test-Path -LiteralPath $runDir) {
     throw "Run folder already exists: $runDir. Choose a new -SessionId."
@@ -258,8 +266,13 @@ try {
         movie_project = $movieRoot.Path
         benchmark_project = $benchRoot.Path
         rig_config = if ($rigConfigResolved) { $rigConfigResolved.Path } else { $null }
-    } | ConvertTo-Json
-    Set-Content -LiteralPath (Join-Path $runDir 'run_metadata.json') -Value $metadata
+    }
+    if ($approvedPlanMetadata) {
+        $metadata.session_plan_timestamp_seed = $approvedPlanMetadata.timestampSeed
+        $metadata.session_plan_rng_seed = $approvedPlanMetadata.rngSeed
+        $metadata.session_plan_generated_at = $approvedPlanMetadata.generatedAt
+    }
+    Set-Content -LiteralPath (Join-Path $runDir 'run_metadata.json') -Value ($metadata | ConvertTo-Json)
 
     if ($Setup) {
         if ($VideoSource -eq 'local') {
@@ -313,7 +326,6 @@ try {
         finally { Pop-Location }
     }
 
-    $sourceExperimentDir = Join-Path $movieRoot 'Code\exp00_pilot_interleave'
     if ($DryRun -or $Setup) {
         $dryRunCommand = "addpath(genpath('$($sourceExperimentDir -replace '''', '''''')')); cclab = CONFI_exp00_pilot(); pool = readtable(cclab.poolFile); assert(height(pool) >= 2, 'Pilot pool needs at least two videos.'); for i = 1:height(pool), assert(exist(fullfile(cclab.filepath, 'video_all', char(pool.filename(i))), 'file') == 2, 'Missing pilot video: %s', pool.filename(i)); end; fprintf('DRY RUN OK: %s (%d videos)\n', cclab.filepath, height(pool));"
         Invoke-Checked 'exp_00 headless configuration and video check' { & $matlab.Source -batch $dryRunCommand }
@@ -327,6 +339,7 @@ try {
             New-Item -ItemType Directory -Force -Path $planDir | Out-Null
             $planCsv = Join-Path $planDir 'session_plan.csv'
             Copy-Item -LiteralPath $approvedPlanCsv -Destination $planCsv
+            Copy-Item -LiteralPath $approvedPlanMetadataFile -Destination (Join-Path $planDir 'session_plan_metadata.json')
             Write-Host "Using approved locked session plan: $approvedPlanCsv" -ForegroundColor Green
             if ($VideoSource -eq 'local') {
                 Invoke-Checked "Copy planned videos to $LocalVideoRoot" { Copy-PlanVideos $planCsv $NasVideoRoot $LocalVideoRoot; $global:LASTEXITCODE = 0 }

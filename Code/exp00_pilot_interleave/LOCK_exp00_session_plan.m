@@ -8,8 +8,9 @@ candidateDir = char(candidateDir);
 planFile = fullfile(candidateDir, 'session_plan.csv');
 qcFile = fullfile(candidateDir, 'qc_source_windows.csv');
 reviewFile = fullfile(candidateDir, 'qc_review.csv');
-if exist(planFile, 'file') ~= 2 || exist(qcFile, 'file') ~= 2 || exist(reviewFile, 'file') ~= 2
-    error('exp00:lockInput', 'Candidate folder must contain session_plan.csv, qc_source_windows.csv, and qc_review.csv.');
+candidateMetadataFile = fullfile(candidateDir, 'session_plan_metadata.json');
+if exist(planFile, 'file') ~= 2 || exist(qcFile, 'file') ~= 2 || exist(reviewFile, 'file') ~= 2 || exist(candidateMetadataFile, 'file') ~= 2
+    error('exp00:lockInput', 'Candidate folder must contain plan, metadata, source QC, and review files.');
 end
 
 plan = readtable(planFile, 'TextType', 'string');
@@ -49,9 +50,11 @@ if height(review) ~= 36 || ~all(ismember({'Video','Start_s','End_s','Status'}, r
 end
 
 approvedPlanFile = fullfile(fileparts(mfilename('fullpath')), 'approved_session_plan.csv');
-if exist(approvedPlanFile, 'file') == 2
-    error('exp00:lockExists', 'An approved plan already exists. Rename or archive it before locking another plan.');
+approvedMetadataFile = fullfile(fileparts(mfilename('fullpath')), 'approved_session_plan_metadata.json');
+if exist(approvedPlanFile, 'file') == 2 || exist(approvedMetadataFile, 'file') == 2
+    error('exp00:lockExists', 'An approved plan or its metadata already exists. Rename or archive both before locking another plan.');
 end
 copyfile(planFile, approvedPlanFile);
+copyfile(candidateMetadataFile, approvedMetadataFile);
 fprintf('Locked approved exp_00 plan: %s\n', approvedPlanFile);
 end
