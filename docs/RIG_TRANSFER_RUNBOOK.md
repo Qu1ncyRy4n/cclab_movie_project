@@ -8,7 +8,7 @@ to be copied and pasted.
 lab computer (WSL)  --stage-->  NAS experiment_packages\exp00_<date>\
                                    |
 experiment computer  <--install----+
-  1_Setup_Rig  ->  2_Run_Benchmarks  ->  3_Run_Experiment
+   1_Setup_Rig  ->  2_Run_Experiment  ->  3_Test_TTL  ->  4_Run_Benchmarks  ->  5_Sync_Data
                                    |
 NAS experiment_packages\runs\exp00\<timestamp>_<step>\  <--results copied automatically
 ```
@@ -64,11 +64,11 @@ the benchmarks use synthetic hardware. Benchmark numbers from this test are
    `Desktop\CCLabRig` folder opens.
 3. Double-click **`1_Setup_Rig.cmd`**. At the rig profile prompt, type
    `win_dummy`. Expected: `SETUP OK`.
-4. Double-click **`2_Run_Benchmarks.cmd`**. Press Enter for the profile.
+4. Double-click **`2_Run_Experiment.cmd`**. Enter the participant and operator details.
    At `Copy results to`, type
    `\\cns-nas.ucdavis.edu\cclab\shared\experiment_packages\runs\exp00_dummy` so test runs
    never mix with collection data. Expected: `BENCHMARKS DONE`.
-5. Double-click **`3_Run_Experiment.cmd`**. Subject ID `dummy01`, Enter for
+5. Optionally double-click **`4_Run_Benchmarks.cmd`**. Press Enter for
    the profile, and the same `exp00_dummy` folder. Hold the mouse on the
    fixation dot to start each trial; ESC ends early. Expected: `EXPERIMENT DONE`.
 
@@ -120,7 +120,7 @@ Expected: `SETUP OK`. On `SETUP FAILED`, see Part E.
 ### 4. Benchmarks (before the session)
 
 Confirm the photodiode is on the flashing corner and the TTL loopback is
-connected, then double-click **`C:\CCLabRig\2_Run_Benchmarks.cmd`**. Press
+connected, then double-click **`C:\CCLabRig\4_Run_Benchmarks.cmd`**. Press
 Enter twice to accept the saved profile and the NAS results folder
 `\\cns-nas.ucdavis.edu\cclab\shared\experiment_packages\runs\exp00`.
 
@@ -130,7 +130,7 @@ test. Expected: `BENCHMARKS DONE`.
 ### 5. Experiment
 
 Close other stimulus applications and confirm the EyeLink host and reward
-hardware are connected. Double-click **`C:\CCLabRig\3_Run_Experiment.cmd`**,
+hardware are connected. Double-click **`C:\CCLabRig\2_Run_Experiment.cmd`**,
 then enter the allowed participant ID, experimenter/developer name, I/O modes,
 reward duration, and archive destination.
 
@@ -184,8 +184,10 @@ directly from PowerShell:
 | Launcher | Equivalent |
 | --- | --- |
 | `1_Setup_Rig.cmd` | `run_rig.ps1 -ComputerProfile lab_120 -Setup` |
-| `2_Run_Benchmarks.cmd` | `run_rig.ps1 -ComputerProfile lab_120 -ArchiveRoot <NAS root>` |
-| `3_Run_Experiment.cmd` | `run_rig.ps1 -ComputerProfile lab_120 -RunExperiment -SkipBench -SubjectId <ID> -ArchiveRoot <NAS root>` |
+| `2_Run_Experiment.cmd` | `run_rig.ps1 -ComputerProfile lab_120 -RunExperiment -SkipBench -SubjectId <ID> -ArchiveRoot <NAS root>` |
+| `3_Test_TTL.cmd` | `TEST_exp00_TTL` |
+| `4_Run_Benchmarks.cmd` | `run_rig.ps1 -ComputerProfile lab_120 -ArchiveRoot <NAS root>` |
+| `5_Sync_Data.cmd` | `sync_data.ps1 -SessionId <ID> -ArchiveRoot <NAS root>` |
 
 `-DryRun` performs only the MATLAB configuration and video check.
 `-VideoSource nas -VideoRoot <path>` reads videos from the NAS for diagnosis;

@@ -9,7 +9,7 @@ if not exist "%RUNNER%" (
     exit /b 1
 )
 
-echo Step 3 of 3: exp_00 pilot. Up Arrow safe-pause, Down Arrow resume, F abort-and-pause, ESC then ESC again within 3s quits.
+echo Step 2 of 5: exp_00 pilot. Up Arrow safe-pause, Down Arrow resume, F abort-and-pause, ESC then ESC again within 3s quits.
 echo.
 set "SUBJECT_ID="
 set /p "SUBJECT_ID=Participant (Vennie, Isaac, or DEV-00): "

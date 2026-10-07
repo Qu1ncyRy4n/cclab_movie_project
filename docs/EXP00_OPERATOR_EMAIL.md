@@ -7,13 +7,13 @@ Use this text as the operator email/run sheet. The experiment always writes a co
 1. Confirm the participant is `Vennie`, `Isaac`, or `DEV-00`.
 2. Confirm the experimenter/developer name to record.
 3. The installer defaults to `Desktop\Video_Proj_exp-00`; its `video_folder.txt` defaults to `%USERPROFILE%\Desktop\video_ebm_dataset`. Confirm that local video copy exists and run `1_Setup_Rig.cmd` if it does not.
-4. Use `4_Test_TTL.cmd` if TTL wiring has changed or has not been checked that day.
+4. Use `3_Test_TTL.cmd` if TTL wiring has changed or has not been checked that day.
 5. Choose reward pump-on duration. Default is 400 ms; normal range is 300-500 ms.
 6. Confirm with the PI whether the social-video pool can include manually reviewed directed clips. The current 10-epoch unique-video design is infeasible with social-undirected clips alone.
 
 ## Start The Task
 
-1. Run `3_Run_Experiment.cmd`.
+1. Run `2_Run_Experiment.cmd`.
 2. Enter participant, experimenter/developer, rig profile, eye-tracking mode, neural-I/O mode, reward duration, and archive destination in the Command Prompt.
 3. MATLAB starts with cleared variables/functions and prints the participant, operator, reward duration, and controls before opening the task window.
 4. Verify the Command Prompt transcript is being written under the local run folder.
@@ -27,7 +27,7 @@ Use this text as the operator email/run sheet. The experiment always writes a co
 5. F during a movie: immediately stop the current movie trial. It is saved as `ForcedPause`, completes its blank ITI, then pauses before the next unused trial number.
 6. ESC: shows red `?!` for three seconds. Press ESC again during that window to exit. Let the window expire to continue.
 7. Do not restart MATLAB to pause. Doing so risks an incomplete EyeLink/TTL record; use Up/Down Arrow or F instead.
-8. With neural I/O enabled, pause and resume emit 50 ms control TTLs: `C` (pause, Dev2/port0/line5) and `D` (resume, Dev2/port0/line7). Verify C/D in `4_Test_TTL.cmd` before recording a new acquisition setup.
+8. With neural I/O enabled, pause and resume emit 50 ms control TTLs: `C` (pause, Dev2/port0/line5) and `D` (resume, Dev2/port0/line7). Verify C/D in `3_Test_TTL.cmd` before recording a new acquisition setup.
 
 ## After The Task
 

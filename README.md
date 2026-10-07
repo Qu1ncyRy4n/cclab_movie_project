@@ -92,7 +92,7 @@ On a development machine, stage both repositories to a NAS folder or USB drive:
 On the experiment computer, run `Install-CCLabRig.ps1` from that package. It
 copies both repositories locally to `C:\CCLabRig`; do not run experiments from
 the NAS or USB. The experimenter then double-clicks, in order,
-`1_Setup_Rig.cmd`, `2_Run_Benchmarks.cmd`, and `3_Run_Experiment.cmd`. Each run
+`1_Setup_Rig.cmd`, `2_Run_Experiment.cmd`, and optionally `4_Run_Benchmarks.cmd`. Each run
 folder includes `logs/` and `run_metadata.json` plus `benchmark/` or
 `experiment/`; a successful optional archive copy never deletes local data.
 

@@ -9,7 +9,7 @@ if not exist "%RUNNER%" (
     exit /b 1
 )
 
-echo Step 2 of 3: Python and MATLAB timing benchmarks (about 5 minutes).
+echo Optional timing benchmarks: Python and MATLAB timing benchmarks (about 5 minutes).
 echo Flashing squares appear on the stimulus monitor. That is the test.
 echo.
 set "RIG_PROFILE=lab_120"

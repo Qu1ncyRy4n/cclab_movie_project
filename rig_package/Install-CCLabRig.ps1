@@ -32,5 +32,5 @@ if (-not (Test-Path -LiteralPath $videoFolderFile)) {
     Copy-Item -LiteralPath (Join-Path $packageRoot 'video_folder.txt') -Destination $videoFolderFile
 }
 Write-Host "Installed exp_00 rig package to $InstallRoot" -ForegroundColor Green
-Write-Host "In $InstallRoot, double-click 1_Setup_Rig.cmd, then 2_Run_Benchmarks.cmd, then 3_Run_Experiment.cmd." -ForegroundColor Green
+Write-Host "In $InstallRoot, run 1_Setup_Rig.cmd, then 2_Run_Experiment.cmd. Use 3_Test_TTL.cmd, 4_Run_Benchmarks.cmd, and 5_Sync_Data.cmd as needed." -ForegroundColor Green
 if ($OpenFolder) { Start-Process explorer.exe $InstallRoot }

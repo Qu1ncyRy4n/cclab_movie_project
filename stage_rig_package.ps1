@@ -60,7 +60,7 @@ CCLab Rig Package
 On the experiment machine, double-click Install-CCLabRig.cmd in this folder. It
 copies the code to a local folder (C:\CCLabRig by default) and opens it. There,
 double-click in order:
-  1_Setup_Rig.cmd  2_Run_Benchmarks.cmd  3_Run_Experiment.cmd
+  1_Setup_Rig.cmd  2_Run_Experiment.cmd  3_Test_TTL.cmd  4_Run_Benchmarks.cmd  5_Sync_Data.cmd
 The experiment must run from the local drive, never directly from the NAS/USB.
 "@ | Set-Content -LiteralPath (Join-Path $Destination 'README.txt')
 
