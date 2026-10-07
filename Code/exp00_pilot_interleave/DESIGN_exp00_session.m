@@ -8,11 +8,10 @@ design.segmentDuration_s = 2;
 design.secondsPerVideo = 6;
 design.requireCleanShot = true;
 design.seekSafetyMargin_s = 0.5;
-% Manual QC takes precedence over cuts.csv: these files contain a visible
-% artifact or an edit within the required six-second viewing window.
-design.excludedNature = ["00931DVD.mp4"; "01235DVD.mp4"; "00475DVD.mp4"; ...
-    "00406DVD.mp4"; "00476DVD.mp4"; "00613DVD.mp4"; "00706DVD.mp4"; ...
-    "00212DVD.mp4"; "00922DVD.mp4"];
+% Manual QC takes precedence over cuts.csv. 00931 has a thermal/color defect
+% at onset; the other previously flagged sources may be used only in a plan
+% whose exact window has passed manual QC and has been locked.
+design.excludedNature = "00931DVD.mp4";
 design.excludedSocial = strings(0, 1);
 design.excludedSocialPatterns = ["aggression", "mounting"];
 design.sourcesPerCategory = 18;

@@ -7,8 +7,9 @@ end
 candidateDir = char(candidateDir);
 planFile = fullfile(candidateDir, 'session_plan.csv');
 qcFile = fullfile(candidateDir, 'qc_source_windows.csv');
-if exist(planFile, 'file') ~= 2 || exist(qcFile, 'file') ~= 2
-    error('exp00:lockInput', 'Candidate folder must contain session_plan.csv and qc_source_windows.csv.');
+reviewFile = fullfile(candidateDir, 'qc_review.csv');
+if exist(planFile, 'file') ~= 2 || exist(qcFile, 'file') ~= 2 || exist(reviewFile, 'file') ~= 2
+    error('exp00:lockInput', 'Candidate folder must contain session_plan.csv, qc_source_windows.csv, and qc_review.csv.');
 end
 
 plan = readtable(planFile, 'TextType', 'string');
@@ -38,6 +39,13 @@ end
 candidateSources = unique([string(plan.VideoA); string(plan.VideoB)]);
 if ~isequal(sort(candidateSources), sort(string(qc.Video)))
     error('exp00:lockQC', 'QC sheet does not match the plan sources.');
+end
+review = readtable(reviewFile, 'TextType', 'string');
+qcKeys = string(qc.Video) + "|" + string(qc.Start_s) + "|" + string(qc.End_s);
+reviewKeys = string(review.Video) + "|" + string(review.Start_s) + "|" + string(review.End_s);
+if height(review) ~= 36 || ~all(ismember({'Video','Start_s','End_s','Status'}, review.Properties.VariableNames)) || ...
+        ~isequal(sort(reviewKeys), sort(qcKeys)) || any(string(review.Status) ~= "PASS")
+    error('exp00:lockReview', 'All 36 QC review rows must match the plan and be marked PASS.');
 end
 
 approvedPlanFile = fullfile(fileparts(mfilename('fullpath')), 'approved_session_plan.csv');

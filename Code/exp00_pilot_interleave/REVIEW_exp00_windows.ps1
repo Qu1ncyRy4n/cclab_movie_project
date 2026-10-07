@@ -18,9 +18,9 @@ if (-not (Test-Path -LiteralPath $QcCsv)) { throw "QC CSV not found: $QcCsv" }
 if (-not (Test-Path -LiteralPath $VideoRoot)) { throw "Video folder not found: $VideoRoot" }
 
 $vlcCandidates = @(
-    (Get-Command vlc.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -First 1),
     "$env:ProgramFiles\VideoLAN\VLC\vlc.exe",
-    "${env:ProgramFiles(x86)}\VideoLAN\VLC\vlc.exe"
+    "${env:ProgramFiles(x86)}\VideoLAN\VLC\vlc.exe",
+    (Get-Command vlc.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -First 1)
 ) | Where-Object { $_ -and (Test-Path -LiteralPath $_) }
 if (-not $vlcCandidates) {
     throw 'VLC was not found. Install VLC or add vlc.exe to PATH, then run this script again.'
