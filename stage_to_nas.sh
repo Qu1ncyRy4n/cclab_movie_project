@@ -48,10 +48,18 @@ fi
 mkdir -p "$DESTINATION/cclab_movie_project" "$DESTINATION/mat_vs_py_bench"
 EXCLUDES=(
     --exclude .git --exclude .venv --exclude .direnv --exclude __pycache__
+    # Pilot recordings and other run outputs remain local to the rig.
     --exclude .DS_Store --exclude data --exclude results --exclude 'Output_*'
 )
 rsync -a --delete "${EXCLUDES[@]}" "$MOVIE/" "$DESTINATION/cclab_movie_project/"
 rsync -a --delete "${EXCLUDES[@]}" "$BENCH/" "$DESTINATION/mat_vs_py_bench/"
+
+for staged_data in "$DESTINATION/cclab_movie_project/data" "$DESTINATION/mat_vs_py_bench/data"; do
+    if [[ -d "$staged_data" ]] && [[ -n "$(find "$staged_data" -mindepth 1 -print -quit)" ]]; then
+        echo "Refusing to publish local data files: $staged_data" >&2
+        exit 1
+    fi
+done
 
 cp "$MOVIE/rig_package/Install-CCLabRig.ps1" "$DESTINATION/"
 cp "$MOVIE/rig_package/video_folder.txt" "$DESTINATION/"
