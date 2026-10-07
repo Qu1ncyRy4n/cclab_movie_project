@@ -20,11 +20,12 @@ durationStem = stripExtension(durations.filename);
 cutStem = stripExtension(cuts.filename);
 
 nature = eligibleSources(unique(manifestStem(manifest.video_nature == 1)), ...
-    durationStem, durations.duration_s, cutStem, cuts.scene_cuts, design);
+    durationStem, durations.duration_s, cutStem, cuts.keyframes, design);
 undirected = eligibleSources(unique(manifestStem(manifest.video_social_undir == 1)), ...
-    durationStem, durations.duration_s, cutStem, cuts.scene_cuts, design);
+    durationStem, durations.duration_s, cutStem, cuts.keyframes, design);
 directed = eligibleSources(unique(manifestStem(manifest.video_social_directed == 1)), ...
-    durationStem, durations.duration_s, cutStem, cuts.scene_cuts, design);
+    durationStem, durations.duration_s, cutStem, cuts.keyframes, design);
+nature = nature(~ismember(nature.stem, stripExtension(design.excludedNature)), :);
 
 switch design.socialPool
     case "undir_only"
@@ -36,6 +37,7 @@ switch design.socialPool
     otherwise
         error('exp00:unknownSocialPool', 'Unknown socialPool: %s', design.socialPool);
 end
+social = social(~contains(lower(social.stem), design.excludedSocialPatterns), :);
 
 trialsPerCondition = design.epochs * design.trialsPerConditionPerEpoch;
 requiredNature = design.sourcesPerCategory;
@@ -89,10 +91,10 @@ for i = 1:numel(stems)
 
     duration = durationValues(durationIndex);
     cuts = parseTimes(cutValues(cutIndex));
-    longestShot = max(diff([0, cuts, duration]));
-    isEligible = duration >= design.secondsPerVideo;
+    longestShot = max(diff(unique([0, cuts, duration])));
+    isEligible = duration >= design.secondsPerVideo + design.seekSafetyMargin_s;
     if design.requireCleanShot
-        isEligible = isEligible && longestShot >= design.secondsPerVideo;
+        isEligible = isEligible && longestShot >= design.secondsPerVideo + design.seekSafetyMargin_s;
     end
     if isEligible
         rows(end + 1, 1) = stems(i); %#ok<AGROW>

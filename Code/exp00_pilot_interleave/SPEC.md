@@ -139,6 +139,12 @@ plan-driven 180-trial mode, copying every planned source video locally before
 the task opens. Direct calls to `RUN_exp00_pilot(subID)` retain the small-pool
 pilot; calls with `RUN_exp00_pilot(subID, sessionPlanCsv)` run the saved plan.
 
+Source eligibility is conservative: every stored keyframe is treated as a
+potential visual boundary, and a selected segment starts 0.5 s after the
+beginning of a qualifying interval. `scene_cuts` alone is not used because QC
+showed that it missed visible early cuts. `00931DVD.mp4` is explicitly excluded.
+Social files whose names contain `aggression` or `mounting` are also excluded.
+
 ## Known Limitations and Required Validation
 
 - Windows Psychtoolbox reported beam-position/VBL and missed-flip warnings on

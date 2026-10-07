@@ -148,18 +148,27 @@ here = fileparts(mfilename('fullpath')); root = fileparts(fileparts(here)); data
 manifest = readtable(fullfile(data, 'MANIFEST.csv'), 'TextType', 'string');
 durations = readtable(fullfile(data, 'durations.csv'), 'TextType', 'string');
 cuts = readtable(fullfile(data, 'cuts.csv'), 'TextType', 'string');
-nature = eligible(manifest, durations, cuts, manifest.video_nature == 1, "nature", design);
-social = eligible(manifest, durations, cuts, manifest.video_social_undir == 1, "social", design);
+nature = eligible(manifest, durations, cuts, manifest.video_nature == 1, "nature", design, design.excludedNature);
+social = eligible(manifest, durations, cuts, manifest.video_social_undir == 1, "social", design, design.excludedSocial);
 end
 
-function sources = eligible(manifest, durations, cutsTable, mask, category, design)
+function sources = eligible(manifest, durations, cutsTable, mask, category, design, excluded)
 stems = unique(stripExtension(manifest.filename(mask))); sources = table();
 for i = 1:numel(stems)
     d = find(stripExtension(durations.filename) == stems(i), 1); c = find(stripExtension(cutsTable.filename) == stems(i), 1);
     if isempty(d) || isempty(c), continue; end
-    cuts = parseTimes(cutsTable.scene_cuts(c)); bounds = [0, cuts, durations.duration_s(d)]; [shot, index] = max(diff(bounds));
-    if shot >= design.secondsPerVideo
-        sources = [sources; table(durations.filename(d), category, bounds(index), shot, 'VariableNames', {'filename','category','start_s','longest_clean_shot_s'})]; %#ok<AGROW>
+    % scene_cuts is a high-confidence subset and missed visually apparent
+    % boundaries in QC. Treat every stored keyframe boundary conservatively.
+    boundaries = parseTimes(cutsTable.keyframes(c));
+    bounds = unique([0, boundaries, durations.duration_s(d)]);
+    [shot, index] = max(diff(bounds));
+    filename = durations.filename(d);
+    isExcluded = any(filename == excluded);
+    if category == "social"
+        isExcluded = isExcluded || any(contains(lower(filename), design.excludedSocialPatterns));
+    end
+    if shot >= design.secondsPerVideo + design.seekSafetyMargin_s && ~isExcluded
+        sources = [sources; table(filename, category, bounds(index) + design.seekSafetyMargin_s, shot, 'VariableNames', {'filename','category','start_s','longest_clean_shot_s'})]; %#ok<AGROW>
     end
 end
 end
