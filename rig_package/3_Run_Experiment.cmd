@@ -30,8 +30,14 @@ if "%EXPERIMENTER%"=="" (
 set "RIG_PROFILE=lab_120"
 if exist "%ROOT%rig_profile.txt" set /p RIG_PROFILE=<"%ROOT%rig_profile.txt"
 set "INPUT="
+echo Available rig profiles: lab_120, lab_121, win_dummy, dev_wsl
 set /p "INPUT=Rig profile [%RIG_PROFILE%]: "
 if not "%INPUT%"=="" set "RIG_PROFILE=%INPUT%"
+if /i not "%RIG_PROFILE%"=="lab_120" if /i not "%RIG_PROFILE%"=="lab_121" if /i not "%RIG_PROFILE%"=="win_dummy" if /i not "%RIG_PROFILE%"=="dev_wsl" (
+    echo Invalid rig profile. Choose lab_120, lab_121, win_dummy, or dev_wsl.
+    pause
+    exit /b 1
+)
 
 set "EYE_TRACKING=auto"
 set /p "INPUT=Eye tracking [%EYE_TRACKING%] (auto/on/off): "
