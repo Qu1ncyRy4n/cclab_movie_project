@@ -1,6 +1,6 @@
 function TEST_exp00_TTL()
 % Emit visible, non-reward TTL test pulses and preserve rig configuration.
-% Start the external recorder first. A is Dev2/port0/line4; B is line3.
+% Start the external recorder first. A/B are segment on/off; C/D are pause/resume.
 
 codeRoot = fileparts(fileparts(mfilename('fullpath')));
 addpath(genpath(codeRoot));
@@ -29,7 +29,7 @@ global g_dio;
 fprintf('\nConfigured digital-output channels:\n');
 disp(g_dio.digout.daq.Channels);
 
-for channel = ['A', 'B']
+for channel = ['A', 'B', 'C', 'D']
     fprintf('Testing TTL %s: five 100 ms pulses, one second apart.\n', channel);
     for pulseNumber = 1:5
         fprintf('TTL %s pulse %d/5 sent at %s.\n', channel, pulseNumber, datestr(now, 31));

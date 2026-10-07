@@ -131,10 +131,10 @@ test. Expected: `BENCHMARKS DONE`.
 
 Close other stimulus applications and confirm the EyeLink host and reward
 hardware are connected. Double-click **`C:\CCLabRig\3_Run_Experiment.cmd`**,
-enter the subject ID (1-8 letters, numbers, or underscores), then press Enter
-twice for the saved profile and NAS results folder.
+then enter the allowed participant ID, experimenter/developer name, I/O modes,
+reward duration, and archive destination.
 
-Keys: `ESC` quit, `PageUp` pause, `PageDown` resume. Expected:
+Keys: Up Arrow safe-pause, Down Arrow resume, `F` abort-and-pause, `ESC` then `ESC` again within 3 seconds quit. Expected:
 `EXPERIMENT DONE`.
 
 Steps 4 and 5 are independent: either can be rerun on its own, and each run

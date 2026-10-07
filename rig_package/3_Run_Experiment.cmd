@@ -9,12 +9,20 @@ if not exist "%RUNNER%" (
     exit /b 1
 )
 
-echo Step 3 of 3: exp_00 pilot. Keys: ESC quit, PageUp pause, PageDown resume.
+echo Step 3 of 3: exp_00 pilot. Up Arrow safe-pause, Down Arrow resume, F abort-and-pause, ESC then ESC again within 3s quits.
 echo.
 set "SUBJECT_ID="
-set /p "SUBJECT_ID=Subject ID (1-8 letters, numbers, or underscores): "
+set /p "SUBJECT_ID=Participant (Vennie, Isaac, or DEV-00): "
 if "%SUBJECT_ID%"=="" (
     echo A subject ID is required.
+    pause
+    exit /b 1
+)
+
+set "EXPERIMENTER="
+set /p "EXPERIMENTER=Experimenter/developer name: "
+if "%EXPERIMENTER%"=="" (
+    echo An experimenter/developer name is required.
     pause
     exit /b 1
 )
@@ -32,6 +40,10 @@ set "NEURAL_IO=auto"
 set /p "INPUT=Neural I/O and reward [%NEURAL_IO%] (auto/on/off): "
 if not "%INPUT%"=="" set "NEURAL_IO=%INPUT%"
 
+set "REWARD_MS=400"
+set /p "INPUT=Reward pump-on duration in ms [%REWARD_MS%] (usually 300-500): "
+if not "%INPUT%"=="" set "REWARD_MS=%INPUT%"
+
 set "ARCHIVE_ROOT=\\cns-nas.ucdavis.edu\cclab\shared\experiment_packages\runs\exp00"
 set "INPUT="
 set /p "INPUT=Copy results to [%ARCHIVE_ROOT%] (type local to skip): "
@@ -39,7 +51,7 @@ if /i "%INPUT%"=="local" (set "ARCHIVE_ROOT=") else if not "%INPUT%"=="" set "AR
 set "ARCHIVE_ARG="
 if defined ARCHIVE_ROOT set ARCHIVE_ARG=-ArchiveRoot "%ARCHIVE_ROOT%"
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%RUNNER%" -ComputerProfile "%RIG_PROFILE%" -EyeTracking "%EYE_TRACKING%" -NeuralIO "%NEURAL_IO%" -RunExperiment -SkipBench -SubjectId "%SUBJECT_ID%" %ARCHIVE_ARG%
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%RUNNER%" -ComputerProfile "%RIG_PROFILE%" -EyeTracking "%EYE_TRACKING%" -NeuralIO "%NEURAL_IO%" -RewardMs "%REWARD_MS%" -RunExperiment -SkipBench -SubjectId "%SUBJECT_ID%" -Experimenter "%EXPERIMENTER%" %ARCHIVE_ARG%
 set "STATUS=%ERRORLEVEL%"
 echo.
 if "%STATUS%"=="0" (echo EXPERIMENT DONE.) else (

@@ -23,8 +23,10 @@ param(
     [string]$NasVideoRoot = '\\cns-nas.ucdavis.edu\cclab\shared\Bliss-Moreau_Machado_Videos\video_ebm_dataset',
     [string]$LocalVideoRoot = 'C:\cclab_data\video_ebm_dataset',
     [string]$SessionId = (Get-Date -Format 'yyyy-MM-dd_HHmmss'),
-    [ValidatePattern('^[A-Za-z0-9_]{1,8}$')]
+    [ValidateSet('Vennie', 'Isaac', 'DEV-00')]
     [string]$SubjectId,
+    [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9 _-]{0,63}$')]
+    [string]$Experimenter,
     [int]$Screen = -1,
     [int]$Frames = 3000,
     [int]$Pulses = 10000,
@@ -35,6 +37,8 @@ param(
     [string]$EyeTracking = 'auto',
     [ValidateSet('auto', 'on', 'off')]
     [string]$NeuralIO = 'auto',
+    [ValidateRange(1, 2000)]
+    [int]$RewardMs = 400,
     [switch]$Setup,
     [switch]$RunExperiment,
     [switch]$SkipBench,
@@ -157,7 +161,10 @@ Require-Path (Join-Path $scriptRoot 'Code\exp00_pilot_interleave\RUN_exp00_pilot
 Require-Path (Join-Path $scriptRoot 'Code\cclab-matlab-tools\cclabInitDIO.m') 'cclab MATLAB tools'
 
 if ($RunExperiment -and -not $SubjectId) {
-    throw '-SubjectId (1-8 letters, numbers, or underscores) is required with -RunExperiment.'
+    throw '-SubjectId (Vennie, Isaac, or DEV-00) is required with -RunExperiment.'
+}
+if ($RunExperiment -and -not $Experimenter) {
+    throw '-Experimenter is required with -RunExperiment.'
 }
 if (-not $DryRun) {
     Require-Path $RigConfig 'Rig configuration'
@@ -191,6 +198,8 @@ if (-not $DryRun) {
 }
 $env:CCLAB_COMPUTER_NAME = $ComputerProfile
 $env:CCLAB_VIDEO_SOURCE = $VideoSource
+$env:CCLAB_EXPERIMENTER = $Experimenter
+$env:CCLAB_REWARD_MS = $RewardMs
 if ($EyeTracking -eq 'auto') { Remove-Item Env:CCLAB_USE_EYELINK -ErrorAction SilentlyContinue }
 else { $env:CCLAB_USE_EYELINK = $EyeTracking }
 if ($NeuralIO -eq 'auto') { Remove-Item Env:CCLAB_USE_NEURAL_IO -ErrorAction SilentlyContinue }
@@ -213,6 +222,8 @@ try {
         started_local = (Get-Date).ToString('o')
         computer_name = $env:COMPUTERNAME
         computer_profile = $ComputerProfile
+        participant = $SubjectId
+        experimenter = $Experimenter
         eye_tracking = $EyeTracking
         neural_io = $NeuralIO
         bench_dummy = $benchDummy
@@ -278,7 +289,7 @@ try {
     }
     elseif ($RunExperiment) {
         $safeSubjectId = $SubjectId -replace '''', ''''''
-        $experimentCommand = "addpath(genpath('$($sourceExperimentDir -replace '''', '''''')')); cd('$($experimentDir -replace '''', '''''')'); RUN_exp00_pilot('$safeSubjectId');"
+        $experimentCommand = "clearvars; clear functions; addpath(genpath('$($sourceExperimentDir -replace '''', '''''')')); cd('$($experimentDir -replace '''', '''''')'); RUN_exp00_pilot('$safeSubjectId');"
         Invoke-Checked 'exp_00 MATLAB pilot' { & $matlab.Source -batch $experimentCommand }
     }
 

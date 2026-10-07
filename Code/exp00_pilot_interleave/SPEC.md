@@ -21,8 +21,11 @@ in this order:
 fixation hold -> A1 -> B1 -> A2 -> B2 -> A3 -> B3 -> reward -> ITI
 ```
 
-The task runs for up to 20 trials. The operator may press `ESC` at any time to
-end the whole session. `PageUp` pauses and `PageDown` resumes.
+The task runs for up to 20 trials. `ESC` then `ESC` again within three seconds
+ends the whole session. Up Arrow requests a safe pause: during fixation it
+pauses immediately; during a trial it pauses after that trial saves. Down Arrow
+resumes. `F` during movie playback aborts the current trial, saves it as
+`ForcedPause`, then pauses before the next unused trial number.
 
 ### Trial Timeline
 
@@ -31,12 +34,16 @@ end the whole session. `PageUp` pauses and `PageDown` resumes.
 | Fixation acquisition | Central dot waits indefinitely for gaze in the acceptance window. Loss during the hold restarts acquisition. | Variable |
 | Fixation hold | Gaze must remain in the window after acquisition. | 0.85 s |
 | Interleave | Six segments: three from A and three from B. No fixation between segments. | 12 s nominal |
-| Reward | Green reward image and juice delivery after a completed interleave. | 1 s image; 600 ms reward command |
+| Reward | Green reward image and juice delivery after a completed interleave. | 1 s image; 400 ms command by default, configurable 1-2000 ms |
 | ITI | Grey blank screen. | 2 s |
 
 `segDur = 2 s`, `perClipSeconds = 6 s`, and `segsPerClip = 3`. The six
 segments should therefore yield six onset and six offset event markers per
 completed trial.
+
+With neural I/O enabled, segment onset and offset use TTL lines `A` and `B`.
+Safe/forced pause and resume use `C` and `D`, respectively. All markers use
+the configured 50 ms width.
 
 ## Stimuli
 
@@ -65,8 +72,8 @@ On `lab_120` and `lab_121`, EyeLink and neural I/O default to enabled. The
 launcher can independently set each to `auto`, `on`, or `off`; when EyeLink is
 off, the mouse supplies gaze for task-flow testing. The fixation point is black,
 centered, and has radius 0.25 degrees. The acceptance window is 3 degrees. The reward is
-unconditional once the interleave completes: base duration 600 ms, with random
-doubling currently disabled.
+unconditional once the interleave completes: base duration 400 ms by default,
+with random doubling currently disabled.
 
 Mouse-as-gaze is appropriate for software checks only. It validates task flow
 and messages, not animal eye behavior or calibration.
@@ -80,7 +87,9 @@ uses TTL for clock alignment.
 |---|---|---|---|---:|
 | Segment onset | `SegOn_<trial>_<segment>_<A|B>` | A | `Dev2/port0/line4` | 50 ms |
 | Segment offset | `SegOff_<trial>_<segment>_<A|B>` | B | `Dev2/port0/line3` | 50 ms |
-| Reward | `Reward_<trial>` | reward analog output | `Dev2/ao0` | 600 ms command |
+| Pause | event log `ControlMarker` | C | `Dev2/port0/line5` | 50 ms |
+| Resume | event log `ControlMarker` | D | `Dev2/port0/line7` | 50 ms |
+| Reward | `Reward_<trial>` | reward analog output | `Dev2/ao0` | configured command |
 
 The TTL lines intentionally identify onset versus offset, not trial or video
 identity. Recover trial, segment, and A/B identity by joining neural TTL times
@@ -102,6 +111,8 @@ Each archived run contains:
 `SameCategory`, fixation/interleave/reward times, `AbortPhase`, `TrialSuccess`,
 `RewardSize`, and pre-trial exposure counts. An interrupted interleave is
 retained with `TrialSuccess = 0`; it may still contain useful partial EDF data.
+Each row now also records `Participant` and `Experimenter`; allowed participant
+labels are `Vennie`, `Isaac`, and `DEV-00`.
 
 ## Parameters To Decide With PI
 
@@ -116,6 +127,10 @@ retained with `TrialSuccess = 0`; it may still contain useful partial EDF data.
 | TTL width | 50 ms | Confirm against neural recording-system input requirements. |
 | Fixation dot radius | 0.25 degrees | Tune visibility without changing the 3-degree acceptance window. |
 | Between-segment fixation | None | Keep continuous viewing or add resets for cleaner post-cut gaze measures. |
+
+The future 10-epoch design is kept separately in `DESIGN_exp00_session.m` and
+checked by `CHECK_exp00_feasibility.m`. These files do not alter the current
+small-pool pilot until the PI resolves the social-pool policy.
 
 ## Known Limitations and Required Validation
 

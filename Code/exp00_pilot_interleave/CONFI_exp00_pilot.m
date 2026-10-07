@@ -103,6 +103,8 @@ cclab.randomSeed   = 1;
 % without changing the machine profile. Leave unset to use the rig default.
 cclab.useEyelink  = environmentFlag('CCLAB_USE_EYELINK', cclab.dummymode == 0);
 cclab.useNeuralIO = environmentFlag('CCLAB_USE_NEURAL_IO', cclab.dummymode == 0);
+cclab.allowedParticipants = ["Vennie", "Isaac", "DEV-00"];
+cclab.experimenter = string(getenv('CCLAB_EXPERIMENTER'));
 
 %% ---------------- exp_00 design ----------------
 % Length of one interleaved chunk (s). 2 or 3 — both are worth trying;
@@ -135,6 +137,8 @@ cclab.durations.t_fixation_fp     = 0.85; % required hold before interleave star
 cclab.durations.t_trialend        = 2;    % ITI (blank). 2 or 3 — exploratory, see segDur.
 cclab.durations.t_reward          = 1;    % reward image on screen
 cclab.ttlPulseMs                  = 50;   % downstream acquisition input requires wider markers
+cclab.pauseMarker                 = 'C';  % rig-right: Dev2/port0/line5
+cclab.resumeMarker                = 'D';  % rig-right: Dev2/port0/line7
 
 %% Fixation / Window / Reward
 cclab.windowSize = 3;      % acceptance window half-width (deg)
@@ -143,7 +147,7 @@ cclab.fp_x       = 0;
 cclab.fp_y       = 0;
 cclab.fp_color   = [0 0 0];
 
-cclab.reward     = 600;    % ms, unconditional on completing the interleave
+cclab.reward     = environmentNumber('CCLAB_REWARD_MS', 400, 1, 2000); % ms, pump-on time
 cclab.randreward = false;
 cclab.randper    = 0.8;
 
@@ -180,5 +184,19 @@ switch rawValue
     otherwise
         error('CONFI:invalidEnvironmentFlag', ...
             '%s must be one of on/off, true/false, yes/no, or 1/0.', name);
+end
+end
+
+function value = environmentNumber(name, defaultValue, minimum, maximum)
+rawValue = strtrim(getenv(name));
+if isempty(rawValue)
+    value = defaultValue;
+    return
+end
+
+value = str2double(rawValue);
+if ~isfinite(value) || value < minimum || value > maximum
+    error('CONFI:invalidEnvironmentNumber', ...
+        '%s must be a number from %g to %g.', name, minimum, maximum);
 end
 end
