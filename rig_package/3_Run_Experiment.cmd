@@ -40,13 +40,16 @@ if /i not "%RIG_PROFILE%"=="lab_120" if /i not "%RIG_PROFILE%"=="lab_121" if /i 
 )
 
 set "EYE_TRACKING=auto"
+set "INPUT="
 set /p "INPUT=Eye tracking [%EYE_TRACKING%] (auto/on/off): "
 if not "%INPUT%"=="" set "EYE_TRACKING=%INPUT%"
 set "NEURAL_IO=auto"
+set "INPUT="
 set /p "INPUT=Neural I/O and reward [%NEURAL_IO%] (auto/on/off): "
 if not "%INPUT%"=="" set "NEURAL_IO=%INPUT%"
 
 set "REWARD_MS=400"
+set "INPUT="
 set /p "INPUT=Reward pump-on duration in ms [%REWARD_MS%] (usually 300-500): "
 if not "%INPUT%"=="" set "REWARD_MS=%INPUT%"
 
