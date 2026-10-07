@@ -6,7 +6,7 @@ Use this text as the operator email/run sheet. The experiment always writes a co
 
 1. Confirm the participant is `Vennie`, `Isaac`, or `DEV-00`.
 2. Confirm the experimenter/developer name to record.
-3. Confirm the local video copy exists and run `1_Setup_Rig.cmd` if it does not.
+3. The installer defaults to `Desktop\Video_Proj_exp-00`; its `video_folder.txt` defaults to `%USERPROFILE%\Desktop\video_ebm_dataset`. Confirm that local video copy exists and run `1_Setup_Rig.cmd` if it does not.
 4. Use `4_Test_TTL.cmd` if TTL wiring has changed or has not been checked that day.
 5. Choose reward pump-on duration. Default is 400 ms; normal range is 300-500 ms.
 6. Confirm with the PI whether the social-video pool can include manually reviewed directed clips. The current 10-epoch unique-video design is infeasible with social-undirected clips alone.

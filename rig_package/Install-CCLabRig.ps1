@@ -1,13 +1,13 @@
 [CmdletBinding()]
 param(
-    [string]$InstallRoot = 'C:\CCLabRig',
+    [string]$InstallRoot = 'desktop',
     [switch]$OpenFolder
 )
 
 $ErrorActionPreference = 'Stop'
 $packageRoot = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
 # 'desktop' resolves the real Desktop, including one redirected into OneDrive.
-if ($InstallRoot -eq 'desktop') { $InstallRoot = Join-Path ([Environment]::GetFolderPath('Desktop')) 'CCLabRig' }
+if ($InstallRoot -eq 'desktop') { $InstallRoot = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Video_Proj_exp-00' }
 $movieSource = Join-Path $packageRoot 'cclab_movie_project'
 $benchSource = Join-Path $packageRoot 'mat_vs_py_bench'
 if (-not (Test-Path -LiteralPath $movieSource) -or -not (Test-Path -LiteralPath $benchSource)) {
@@ -31,6 +31,6 @@ $videoFolderFile = Join-Path $InstallRoot 'video_folder.txt'
 if (-not (Test-Path -LiteralPath $videoFolderFile)) {
     Copy-Item -LiteralPath (Join-Path $packageRoot 'video_folder.txt') -Destination $videoFolderFile
 }
-Write-Host "Installed CCLab rig package to $InstallRoot" -ForegroundColor Green
+Write-Host "Installed exp_00 rig package to $InstallRoot" -ForegroundColor Green
 Write-Host "In $InstallRoot, double-click 1_Setup_Rig.cmd, then 2_Run_Benchmarks.cmd, then 3_Run_Experiment.cmd." -ForegroundColor Green
 if ($OpenFolder) { Start-Process explorer.exe $InstallRoot }

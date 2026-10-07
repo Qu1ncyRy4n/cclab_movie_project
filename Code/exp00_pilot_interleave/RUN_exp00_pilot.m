@@ -59,9 +59,7 @@ try
         error('Experimenter/developer name is required.');
     end
     fprintf('Participant: %s; experimenter/developer: %s\n', subID, cclab.experimenter);
-    fprintf(['OPERATOR CONTROLS: Up Arrow requests a safe pause. Down Arrow resumes. ' ...
-        'F aborts the current movie trial, saves it, then pauses. ' ...
-        'ESC then ESC again within 3 seconds exits.\n']);
+    printOperatorControls();
     fprintf('Reward pump-on duration: %g ms (set CCLAB_REWARD_MS before launch to change it).\n\n', cclab.reward);
 
     dummymode_EYE = cclab.dummymode;
@@ -338,6 +336,7 @@ try
                 saveCheckpoint(outMat, Results, cclab, activeTrial);
                 fprintf('\n=== Trial #%d of %d (success so far=%d) ===\n', ...
                     total_trials, cclab.nTrials, total_success);
+                printOperatorControls();
                 abortPhase = "None";
                 fixAcquiredMs   = NaN;
                 interleaveOffMs = NaN;
@@ -790,6 +789,11 @@ if useNeuralIO
 end
 appendEvent(eventLog, 'ControlMarker', trialNum, NaN, ...
     sprintf('action=%s;ttl=%s;ttl_ms=%g;io_enabled=%d', action, marker, ttlPulseMs, useNeuralIO));
+end
+
+function printOperatorControls()
+fprintf(['CONTROLS: Up=safe pause; Down=resume; F=abort current movie trial then pause; ' ...
+    'ESC then ESC within 3s=exit.\n']);
 end
 
 % ---------------------------------------------------------------------------

@@ -3,7 +3,5 @@
 # Lines starting with # are ignored. %USERPROFILE% and similar are expanded.
 # Either the dataset folder (the one that contains video_all) or the
 # video_all folder itself works. Setup copies any missing pilot videos into it.
-# With no path line, the default is C:\cclab_data\video_ebm_dataset
-#
-# Example:
-# %USERPROFILE%\Desktop\Bliss-Moreau_Machado_Videos\video_ebm_dataset
+# Default local dataset path. Change this line if the videos are elsewhere.
+%USERPROFILE%\Desktop\video_ebm_dataset
