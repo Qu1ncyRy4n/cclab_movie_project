@@ -9,7 +9,8 @@ if not exist "%RUNNER%" (
     exit /b 1
 )
 
-echo Step 2 of 5: planned 180-trial exp_00 session. The required local videos are copied before the task opens.
+echo Step 2 of 5: approved 180-trial exp_00 session. The required local videos are copied before the task opens.
+echo This launcher refuses to run unless approved_session_plan.csv has been locked after source QC.
 echo Controls: Up Arrow safe-pause, Down Arrow resume, F abort-and-pause, ESC then ESC again within 3s quits.
 echo.
 set "SUBJECT_ID="

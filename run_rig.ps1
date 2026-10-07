@@ -313,11 +313,12 @@ try {
         $safeSubjectId = $SubjectId -replace '''', ''''''
         if ($FullSession) {
             $planDir = Join-Path $experimentDir 'session_plan'
-            $safePlanDir = $planDir -replace '''', ''''''
-            $prepareCommand = "clearvars; clear functions; addpath(genpath('$($sourceExperimentDir -replace '''', '''''')')); PREPARE_exp00_session_plan('$safePlanDir');"
-            Invoke-Checked 'Generate reproducible 180-trial session plan' { & $matlab.Source -batch $prepareCommand }
+            $approvedPlanCsv = Join-Path $sourceExperimentDir 'approved_session_plan.csv'
+            Require-Path $approvedPlanCsv 'Approved 180-trial session plan (lock a manually reviewed candidate with LOCK_exp00_session_plan first)'
+            New-Item -ItemType Directory -Force -Path $planDir | Out-Null
             $planCsv = Join-Path $planDir 'session_plan.csv'
-            Require-Path $planCsv 'Generated session plan'
+            Copy-Item -LiteralPath $approvedPlanCsv -Destination $planCsv
+            Write-Host "Using approved locked session plan: $approvedPlanCsv" -ForegroundColor Green
             if ($VideoSource -eq 'local') {
                 Invoke-Checked "Copy planned videos to $LocalVideoRoot" { Copy-PlanVideos $planCsv $NasVideoRoot $LocalVideoRoot; $global:LASTEXITCODE = 0 }
             }
