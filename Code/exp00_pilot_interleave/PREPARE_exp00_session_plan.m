@@ -13,6 +13,20 @@ mkdir(outputDir);
 writetable(plan, fullfile(outputDir, 'session_plan.csv'));
 save(fullfile(outputDir, 'session_plan.mat'), 'plan', 'metadata');
 
+sourceA = table(plan.VideoA, plan.CategoryA, plan.StartA_s, ...
+    'VariableNames', {'Video','Category','Start_s'});
+sourceB = table(plan.VideoB, plan.CategoryB, plan.StartB_s, ...
+    'VariableNames', {'Video','Category','Start_s'});
+qcSources = unique([sourceA; sourceB], 'rows', 'stable');
+qcSources.End_s = qcSources.Start_s + metadata.design.secondsPerVideo;
+qcSources = sortrows(qcSources, {'Category','Video'});
+writetable(qcSources, fullfile(outputDir, 'qc_source_windows.csv'));
+
+qcPairs = plan(plan.PairRepetition == 1, {'PairID','Condition','VideoA','StartA_s','VideoB','StartB_s'});
+qcPairs.EndA_s = qcPairs.StartA_s + metadata.design.secondsPerVideo;
+qcPairs.EndB_s = qcPairs.StartB_s + metadata.design.secondsPerVideo;
+writetable(qcPairs, fullfile(outputDir, 'qc_fixed_pairs.csv'));
+
 fid = fopen(fullfile(outputDir, 'session_plan_metadata.json'), 'w');
 if fid < 0, error('exp00:planMetadata', 'Cannot write plan metadata.'); end
 cleanupFile = onCleanup(@() fclose(fid)); %#ok<NASGU>
@@ -21,4 +35,6 @@ fprintf(fid, '%s\n', jsonencode(jsonMetadata));
 
 fprintf('Prepared exp_00 plan: %s\n', outputDir);
 fprintf('Timestamp seed: %s; MATLAB RNG seed: %u\n', metadata.timestampSeed, metadata.rngSeed);
+fprintf('QC source windows: %s\n', fullfile(outputDir, 'qc_source_windows.csv'));
+fprintf('QC fixed pairs: %s\n', fullfile(outputDir, 'qc_fixed_pairs.csv'));
 end
