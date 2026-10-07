@@ -1,8 +1,15 @@
-function plan = BUILD_exp00_session_plan(randomSeed)
+function [plan, metadata] = BUILD_exp00_session_plan(randomSeed)
 % BUILD_exp00_session_plan Construct and verify the confirmed 10x18 session.
 % This precomputes the full plan; it does not alter RUN_exp00_pilot yet.
-if nargin < 1, randomSeed = 'shuffle'; end
-rng(randomSeed);
+if nargin < 1 || isempty(randomSeed)
+    timestamp = datestr(now, 'yyyymmddHHMMSS');
+    % MATLAB RNG seeds are 32-bit. Keep the timestamp and derive a valid,
+    % reproducible numeric seed instead of silently using rng('shuffle').
+    randomSeed = mod(str2double(timestamp), 2^32 - 1);
+else
+    timestamp = '';
+end
+rng(randomSeed, 'twister');
 design = DESIGN_exp00_session();
 if design.epochs * design.trialsPerConditionPerEpoch ~= 60
     error('exp00:design', 'This builder expects 60 trials per condition.');
@@ -55,6 +62,9 @@ plan.VideoA = string(plan.VideoA); plan.VideoB = string(plan.VideoB);
 plan.CategoryA = string(plan.CategoryA); plan.CategoryB = string(plan.CategoryB);
 plan.StartA_s = cell2mat(plan.StartA_s); plan.StartB_s = cell2mat(plan.StartB_s);
 verifyPlan(plan, design, nature, social);
+metadata = struct('generatedAt', datestr(now, 31), 'timestampSeed', timestamp, ...
+    'rngSeed', randomSeed, 'design', design, 'natureSources', nature, 'socialSources', social);
+plan.Properties.UserData = metadata;
 end
 
 function matrix = roleMatrix(nSources, nEpochs)

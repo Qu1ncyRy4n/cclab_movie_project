@@ -132,7 +132,9 @@ The confirmed future design is ten 18-trial epochs (six `NN`, six `SS`, six
 `NS` each). `BUILD_exp00_session_plan.m` selects 18 Nature and 18
 social-undirected sources, presents each source exactly ten times, re-pairs
 them without repeating a pair, balances `NS` order, and verifies the plan
-before collection. This future scheduler remains separate from the current
+before collection. `PREPARE_exp00_session_plan.m` derives a valid MATLAB RNG
+seed from the session-start timestamp and saves the timestamp, seed, source
+list, CSV plan, and MAT plan artifact. This future scheduler remains separate from the current
 small-pool pilot until its PTB task path is integrated and tested.
 
 ## Known Limitations and Required Validation
