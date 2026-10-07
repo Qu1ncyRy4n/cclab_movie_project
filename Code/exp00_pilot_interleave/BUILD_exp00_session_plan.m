@@ -45,14 +45,14 @@ for epoch = 1:design.epochs
 end
 plan = cell2table(rows, 'VariableNames', {'Epoch', 'TrialInEpoch', 'TrialNum', ...
     'Condition', 'PairID', 'PairRepetition', 'VideoA', 'VideoB', 'CategoryA', 'CategoryB', 'StartA_s', 'StartB_s'});
-plan.Epoch = cell2mat(plan.Epoch);
-plan.TrialInEpoch = cell2mat(plan.TrialInEpoch);
-plan.TrialNum = cell2mat(plan.TrialNum);
+plan.Epoch = numericColumn(plan.Epoch);
+plan.TrialInEpoch = numericColumn(plan.TrialInEpoch);
+plan.TrialNum = numericColumn(plan.TrialNum);
 plan.Condition = string(plan.Condition);
-plan.PairID = string(plan.PairID); plan.PairRepetition = cell2mat(plan.PairRepetition);
+plan.PairID = string(plan.PairID); plan.PairRepetition = numericColumn(plan.PairRepetition);
 plan.VideoA = string(plan.VideoA); plan.VideoB = string(plan.VideoB);
 plan.CategoryA = string(plan.CategoryA); plan.CategoryB = string(plan.CategoryB);
-plan.StartA_s = cell2mat(plan.StartA_s); plan.StartB_s = cell2mat(plan.StartB_s);
+plan.StartA_s = numericColumn(plan.StartA_s); plan.StartB_s = numericColumn(plan.StartB_s);
 verifyPlan(plan, design, nature, social);
 metadata = struct('generatedAt', datestr(now, 31), 'timestampSeed', timestamp, ...
     'rngSeed', randomSeed, 'design', design, 'natureSources', nature, 'socialSources', social);
@@ -105,6 +105,14 @@ keys = strings(numel(a), 1);
 for i = 1:numel(a)
     names = sort([string(a(i)), string(b(i))]);
     keys(i) = names(1) + "|" + names(2);
+end
+end
+
+function values = numericColumn(values)
+if iscell(values)
+    values = cell2mat(values);
+else
+    values = double(values);
 end
 end
 
