@@ -19,13 +19,15 @@ nsSocial = roleMatrix(design.sourcesPerCategory, design.epochs);
 
 usedNN = strings(0, 1); usedSS = strings(0, 1); usedNS = strings(0, 1);
 rows = cell(design.epochs * 18, 10); row = 0;
+previousCondition = "";
 for epoch = 1:design.epochs
     nNS = nature(nsNature(epoch, :), :); nNN = nature(~nsNature(epoch, :), :);
     sNS = social(nsSocial(epoch, :), :); sSS = social(~nsSocial(epoch, :), :);
     [nnPairs, usedNN] = newPairs(nNN, usedNN);
     [ssPairs, usedSS] = newPairs(sSS, usedSS);
     [nsPairs, usedNS] = newMixedPairs(nNS, sNS, usedNS);
-    labels = conditionOrder(design);
+    labels = conditionOrder(design, previousCondition);
+    previousCondition = labels(end);
     nnIndex = 1; ssIndex = 1; nsIndex = 1;
     for trialInEpoch = 1:numel(labels)
         condition = labels(trialInEpoch);
@@ -111,7 +113,7 @@ for i = 1:numel(a)
 end
 end
 
-function labels = conditionOrder(design)
+function labels = conditionOrder(design, previousCondition)
 for attempt = 1:10000
     labels = repelem(design.conditions, design.trialsPerConditionPerEpoch);
     labels = labels(randperm(numel(labels)));
@@ -120,7 +122,7 @@ for attempt = 1:10000
         if labels(i) == labels(i - 1), runLength = runLength + 1; else, runLength = 1; end
         if runLength > design.maxConditionRun, valid = false; break; end
     end
-    if valid, return; end
+    if valid && (previousCondition == "" || labels(1) ~= previousCondition), return; end
 end
 error('exp00:conditionOrder', 'Could not construct condition order.');
 end
