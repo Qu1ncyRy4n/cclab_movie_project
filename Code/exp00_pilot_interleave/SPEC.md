@@ -128,9 +128,12 @@ labels are `Vennie`, `Isaac`, and `DEV-00`.
 | Fixation dot radius | 0.25 degrees | Tune visibility without changing the 3-degree acceptance window. |
 | Between-segment fixation | None | Keep continuous viewing or add resets for cleaner post-cut gaze measures. |
 
-The future 10-epoch design is kept separately in `DESIGN_exp00_session.m` and
-checked by `CHECK_exp00_feasibility.m`. These files do not alter the current
-small-pool pilot until the PI resolves the social-pool policy.
+The confirmed future design is ten 18-trial epochs (six `NN`, six `SS`, six
+`NS` each). `BUILD_exp00_session_plan.m` selects 18 Nature and 18
+social-undirected sources, presents each source exactly ten times, re-pairs
+them without repeating a pair, balances `NS` order, and verifies the plan
+before collection. This future scheduler remains separate from the current
+small-pool pilot until its PTB task path is integrated and tested.
 
 ## Known Limitations and Required Validation
 

@@ -7,11 +7,13 @@ design.conditions = ["NN", "SS", "NS"];
 design.segmentDuration_s = 2;
 design.secondsPerVideo = 6;
 design.requireCleanShot = true;
-design.globalUniqueSources = true;
+design.sourcesPerCategory = 18;
+design.repetitionsPerSource = 10;
+design.globalUniquePairs = true;
 design.mixedOrder = "balanced";
+design.maxConditionRun = 2;
 
-% Candidate policies for the PI decision. The checker reports feasibility for
-% the active policy without changing the currently deployed pilot.
+% The confirmed interim policy needs only social-undirected sources.
 design.socialPool = "undir_only";
 design.nonAggressiveDirectedPattern = "aggr";
 

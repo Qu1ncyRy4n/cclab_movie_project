@@ -38,8 +38,8 @@ switch design.socialPool
 end
 
 trialsPerCondition = design.epochs * design.trialsPerConditionPerEpoch;
-requiredNature = trialsPerCondition * 3; % 2 per NN trial + 1 per NS trial
-requiredSocial = trialsPerCondition * 3; % 2 per SS trial + 1 per NS trial
+requiredNature = design.sourcesPerCategory;
+requiredSocial = design.sourcesPerCategory;
 transitionsPerTrial = (2 * design.secondsPerVideo / design.segmentDuration_s) - 1;
 
 summary = table( ...
@@ -59,6 +59,7 @@ report.totalTrials = trialsPerCondition * numel(design.conditions);
 report.transitionsPerTrial = transitionsPerTrial;
 report.totalTransitions = report.totalTrials * transitionsPerTrial;
 report.transitionsPerCondition = trialsPerCondition * transitionsPerTrial;
+report.sourcePresentationsPerCategory = trialsPerCondition * 3;
 report.isFeasible = all(summary.margin >= 0);
 
 fprintf('exp_00 future-session feasibility\n');
@@ -66,6 +67,8 @@ fprintf('  epochs: %d; trials/condition/epoch: %d; social pool: %s\n', ...
     design.epochs, design.trialsPerConditionPerEpoch, design.socialPool);
 fprintf('  total trials: %d; transitions/trial: %d; total transitions: %d\n', ...
     report.totalTrials, transitionsPerTrial, report.totalTransitions);
+fprintf('  unique sources/category: %d; appearances/source: %d\n', ...
+    design.sourcesPerCategory, design.repetitionsPerSource);
 disp(summary)
 if report.isFeasible
     fprintf('RESULT: feasible with the current policy.\n');
