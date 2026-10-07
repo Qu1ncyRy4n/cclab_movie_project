@@ -9,7 +9,7 @@ design.secondsPerVideo = 6;
 design.requireCleanShot = true;
 design.sourcesPerCategory = 18;
 design.repetitionsPerSource = 10;
-design.globalUniquePairs = true;
+design.fixedPairsAcrossEpochs = true;
 design.mixedOrder = "balanced";
 design.maxConditionRun = 2;
 

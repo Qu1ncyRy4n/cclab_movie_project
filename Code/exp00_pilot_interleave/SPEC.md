@@ -130,8 +130,8 @@ labels are `Vennie`, `Isaac`, and `DEV-00`.
 
 The confirmed future design is ten 18-trial epochs (six `NN`, six `SS`, six
 `NS` each). `BUILD_exp00_session_plan.m` selects 18 Nature and 18
-social-undirected sources, presents each source exactly ten times, re-pairs
-them without repeating a pair, balances `NS` order, and verifies the plan
+social-undirected sources, presents each source exactly ten times, creates 18
+fixed video pairs that each repeat once per epoch, balances `NS` order, and verifies the plan
 before collection. `PREPARE_exp00_session_plan.m` derives a valid MATLAB RNG
 seed from the session-start timestamp and saves the timestamp, seed, source
 list, CSV plan, and MAT plan artifact. `2_Run_Experiment.cmd` now uses the

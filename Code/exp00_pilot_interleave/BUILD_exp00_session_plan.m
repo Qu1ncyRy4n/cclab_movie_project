@@ -21,43 +21,35 @@ if height(nature) < design.sourcesPerCategory || height(social) < design.sources
 end
 nature = nature(randperm(height(nature), design.sourcesPerCategory), :);
 social = social(randperm(height(social), design.sourcesPerCategory), :);
-nsNature = roleMatrix(design.sourcesPerCategory, design.epochs);
-nsSocial = roleMatrix(design.sourcesPerCategory, design.epochs);
-
-usedNN = strings(0, 1); usedSS = strings(0, 1); usedNS = strings(0, 1);
-rows = cell(design.epochs * 18, 10); row = 0;
+basePairs = fixedPairs(nature, social);
+rows = cell(design.epochs * 18, 12); row = 0;
 previousCondition = "";
 for epoch = 1:design.epochs
-    nNS = nature(nsNature(epoch, :), :); nNN = nature(~nsNature(epoch, :), :);
-    sNS = social(nsSocial(epoch, :), :); sSS = social(~nsSocial(epoch, :), :);
-    [nnPairs, usedNN] = newPairs(nNN, usedNN);
-    [ssPairs, usedSS] = newPairs(sSS, usedSS);
-    [nsPairs, usedNS] = newMixedPairs(nNS, sNS, usedNS);
     labels = conditionOrder(design, previousCondition);
     previousCondition = labels(end);
     nnIndex = 1; ssIndex = 1; nsIndex = 1;
     for trialInEpoch = 1:numel(labels)
         condition = labels(trialInEpoch);
         switch condition
-            case "NN", pair = nnPairs{nnIndex}; nnIndex = nnIndex + 1;
-            case "SS", pair = ssPairs{ssIndex}; ssIndex = ssIndex + 1;
-            case "NS", pair = nsPairs{nsIndex}; nsIndex = nsIndex + 1;
+            case "NN", pairIndex = nnIndex; nnIndex = nnIndex + 1;
+            case "SS", pairIndex = ssIndex; ssIndex = ssIndex + 1;
+            case "NS", pairIndex = nsIndex; nsIndex = nsIndex + 1;
         end
-        if condition == "NS" && mod(nsIndex - 1, 2) == 0
-            pair = pair([2 1], :);
-        end
+        pair = basePairs.(char(condition)){pairIndex};
+        pairID = sprintf('%s_%02d', condition, pairIndex);
         row = row + 1;
-        rows(row, :) = {epoch, trialInEpoch, row, condition, pair.filename(1), ...
+        rows(row, :) = {epoch, trialInEpoch, row, condition, pairID, epoch, pair.filename(1), ...
             pair.filename(2), pair.category(1), pair.category(2), ...
             pair.start_s(1), pair.start_s(2)};
     end
 end
 plan = cell2table(rows, 'VariableNames', {'Epoch', 'TrialInEpoch', 'TrialNum', ...
-    'Condition', 'VideoA', 'VideoB', 'CategoryA', 'CategoryB', 'StartA_s', 'StartB_s'});
+    'Condition', 'PairID', 'PairRepetition', 'VideoA', 'VideoB', 'CategoryA', 'CategoryB', 'StartA_s', 'StartB_s'});
 plan.Epoch = cell2mat(plan.Epoch);
 plan.TrialInEpoch = cell2mat(plan.TrialInEpoch);
 plan.TrialNum = cell2mat(plan.TrialNum);
 plan.Condition = string(plan.Condition);
+plan.PairID = string(plan.PairID); plan.PairRepetition = cell2mat(plan.PairRepetition);
 plan.VideoA = string(plan.VideoA); plan.VideoB = string(plan.VideoB);
 plan.CategoryA = string(plan.CategoryA); plan.CategoryB = string(plan.CategoryB);
 plan.StartA_s = cell2mat(plan.StartA_s); plan.StartB_s = cell2mat(plan.StartB_s);
@@ -67,22 +59,15 @@ metadata = struct('generatedAt', datestr(now, 31), 'timestampSeed', timestamp, .
 plan.Properties.UserData = metadata;
 end
 
-function matrix = roleMatrix(nSources, nEpochs)
-% Each source is mixed-category 3 or 4 times, 60 assignments in total.
-quota = [repmat(4, 1, 6), repmat(3, 1, nSources - 6)];
-for attempt = 1:10000
-    ids = repelem(randperm(nSources), quota);
-    ids = ids(randperm(numel(ids)));
-    matrix = false(nEpochs, nSources);
-    valid = true;
-    for epoch = 1:nEpochs
-        chunk = ids((epoch - 1) * 6 + (1:6));
-        if numel(unique(chunk)) ~= 6, valid = false; break; end
-        matrix(epoch, chunk) = true;
-    end
-    if valid, return; end
+function pairs = fixedPairs(nature, social)
+[pairs.NN, ~] = newPairs(nature(1:12, :), strings(0, 1));
+[pairs.SS, ~] = newPairs(social(1:12, :), strings(0, 1));
+[pairs.NS, ~] = newMixedPairs(nature(13:18, :), social(13:18, :), strings(0, 1));
+% Hold both the pair and its A/B order fixed. Three base pairs begin N->S,
+% the other three S->N, yielding 30 trials of each order across ten epochs.
+for i = 4:6
+    pairs.NS{i} = pairs.NS{i}([2 1], :);
 end
-error('exp00:roles', 'Could not distribute mixed-category roles.');
 end
 
 function [pairs, used] = newPairs(sources, used)
@@ -144,7 +129,9 @@ allVideos = [plan.VideoA; plan.VideoB];
 assert(all(sum(allVideos == nature.filename', 1) == design.repetitionsPerSource), 'exp00:natureCounts');
 assert(all(sum(allVideos == social.filename', 1) == design.repetitionsPerSource), 'exp00:socialCounts');
 keys = pairKeys(plan.VideoA, plan.VideoB);
-assert(numel(unique(keys)) == height(plan), 'exp00:repeatedPair');
+assert(numel(unique(keys)) == 18, 'exp00:basePairCount');
+assert(all(sum(keys == unique(keys)', 1) == design.epochs), 'exp00:pairRepetitions');
+assert(all(sum(plan.PairID == unique(plan.PairID)', 1) == design.epochs), 'exp00:pairIDs');
 assert(sum(plan.Condition == "NS" & plan.CategoryA == "nature") == 30, 'exp00:mixedOrder');
 end
 
