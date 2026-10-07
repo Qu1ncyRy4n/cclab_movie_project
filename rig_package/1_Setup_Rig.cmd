@@ -9,8 +9,8 @@ if not exist "%RUNNER%" (
     exit /b 1
 )
 
-echo Step 1 of 3: copy the pilot videos locally, install the Python environment,
-echo check the rig hardware, and check MATLAB can see all pilot videos.
+echo Step 1 of 3: copy the pilot videos locally and check MATLAB can see all pilot videos.
+echo Python installation and Python rig preflight can be skipped for now.
 echo.
 set "RIG_PROFILE=lab_120"
 if exist "%ROOT%rig_profile.txt" set /p RIG_PROFILE=<"%ROOT%rig_profile.txt"
@@ -18,7 +18,12 @@ set "INPUT="
 set /p "INPUT=Rig profile (lab_120, lab_121, or win_dummy on a test PC) [%RIG_PROFILE%]: "
 if not "%INPUT%"=="" set "RIG_PROFILE=%INPUT%"
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%RUNNER%" -ComputerProfile "%RIG_PROFILE%" -Setup
+set "SKIP_PYTHON="
+set "INPUT="
+set /p "INPUT=Skip Python installation and preflight [y/N]: "
+if /i "%INPUT%"=="y" set "SKIP_PYTHON=-SkipPython"
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%RUNNER%" -ComputerProfile "%RIG_PROFILE%" -Setup %SKIP_PYTHON%
 set "STATUS=%ERRORLEVEL%"
 echo.
 if "%STATUS%"=="0" (

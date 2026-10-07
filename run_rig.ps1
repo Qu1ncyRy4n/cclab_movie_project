@@ -4,7 +4,7 @@ Set up, benchmark, or run the exp_00 MATLAB pilot on a CCLab Windows rig.
 
 .DESCRIPTION
 Modes (the rig_package launchers call one each):
-  -Setup          copy pilot videos locally, install the Python env, preflight, video check
+  -Setup          copy pilot videos locally, optionally install the Python env/preflight, video check
   (no mode flag)  MATLAB/Python timing benchmarks only
   -RunExperiment  benchmarks, then the exp_00 pilot (add -SkipBench for the pilot only)
   -DryRun         headless exp_00 configuration and video check only
@@ -42,6 +42,7 @@ param(
     [switch]$Setup,
     [switch]$RunExperiment,
     [switch]$FullSession,
+    [switch]$SkipPython,
     [switch]$SkipBench,
     [switch]$DryRun
 )
@@ -187,12 +188,15 @@ if ($RunExperiment -and -not $Experimenter) {
 if ($FullSession -and -not $RunExperiment) {
     throw '-FullSession requires -RunExperiment.'
 }
+if ($SkipPython -and -not $Setup) {
+    throw '-SkipPython is supported only with -Setup.'
+}
 if (-not $DryRun) {
     Require-Path $RigConfig 'Rig configuration'
     Require-Path (Join-Path $BenchRoot 'matlab\t2_photodiode.m') 'MATLAB benchmark arm'
 }
 
-if (-not $DryRun -and ($Setup -or $runBench)) { $uv = Get-OrInstall-UV }
+if (-not $DryRun -and ($Setup -or $runBench) -and -not $SkipPython) { $uv = Get-OrInstall-UV }
 
 $matlab = Get-Command matlab.exe -ErrorAction SilentlyContinue
 if (-not $matlab) { $matlab = Get-Command matlab -ErrorAction SilentlyContinue }
@@ -264,12 +268,17 @@ try {
         }
         $preflightArgs = @()
         if ($benchDummy) { $preflightArgs = @('--off-rig') }
-        Push-Location $benchRoot
-        try {
-            Invoke-Checked 'Install Python benchmark environment' { & $uv.Source sync --locked --extra rig --extra plot }
-            Invoke-Checked 'Python rig preflight' { & $uv.Source run python preflight.py --config $env:CCLAB_RIG_CONFIG @preflightArgs }
+        if ($SkipPython) {
+            Write-Host 'Skipping Python environment installation and Python rig preflight.' -ForegroundColor Yellow
         }
-        finally { Pop-Location }
+        else {
+            Push-Location $benchRoot
+            try {
+                Invoke-Checked 'Install Python benchmark environment' { & $uv.Source sync --locked --extra rig --extra plot }
+                Invoke-Checked 'Python rig preflight' { & $uv.Source run python preflight.py --config $env:CCLAB_RIG_CONFIG @preflightArgs }
+            }
+            finally { Pop-Location }
+        }
     }
 
     if ($runBench) {
