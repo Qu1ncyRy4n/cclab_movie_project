@@ -9,7 +9,8 @@ if not exist "%RUNNER%" (
     exit /b 1
 )
 
-echo Step 2 of 5: exp_00 pilot. Up Arrow safe-pause, Down Arrow resume, F abort-and-pause, ESC then ESC again within 3s quits.
+echo Step 2 of 5: planned 180-trial exp_00 session. The required local videos are copied before the task opens.
+echo Controls: Up Arrow safe-pause, Down Arrow resume, F abort-and-pause, ESC then ESC again within 3s quits.
 echo.
 set "SUBJECT_ID="
 set /p "SUBJECT_ID=Participant (Vennie, Isaac, or DEV-00): "
@@ -60,7 +61,7 @@ if /i "%INPUT%"=="local" (set "ARCHIVE_ROOT=") else if not "%INPUT%"=="" set "AR
 set "ARCHIVE_ARG="
 if defined ARCHIVE_ROOT set ARCHIVE_ARG=-ArchiveRoot "%ARCHIVE_ROOT%"
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%RUNNER%" -ComputerProfile "%RIG_PROFILE%" -EyeTracking "%EYE_TRACKING%" -NeuralIO "%NEURAL_IO%" -RewardMs "%REWARD_MS%" -RunExperiment -SkipBench -SubjectId "%SUBJECT_ID%" -Experimenter "%EXPERIMENTER%" %ARCHIVE_ARG%
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%RUNNER%" -ComputerProfile "%RIG_PROFILE%" -EyeTracking "%EYE_TRACKING%" -NeuralIO "%NEURAL_IO%" -RewardMs "%REWARD_MS%" -RunExperiment -FullSession -SkipBench -SubjectId "%SUBJECT_ID%" -Experimenter "%EXPERIMENTER%" %ARCHIVE_ARG%
 set "STATUS=%ERRORLEVEL%"
 echo.
 if "%STATUS%"=="0" (echo EXPERIMENT DONE.) else (

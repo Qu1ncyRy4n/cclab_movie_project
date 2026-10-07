@@ -134,8 +134,10 @@ social-undirected sources, presents each source exactly ten times, re-pairs
 them without repeating a pair, balances `NS` order, and verifies the plan
 before collection. `PREPARE_exp00_session_plan.m` derives a valid MATLAB RNG
 seed from the session-start timestamp and saves the timestamp, seed, source
-list, CSV plan, and MAT plan artifact. This future scheduler remains separate from the current
-small-pool pilot until its PTB task path is integrated and tested.
+list, CSV plan, and MAT plan artifact. `2_Run_Experiment.cmd` now uses the
+plan-driven 180-trial mode, copying every planned source video locally before
+the task opens. Direct calls to `RUN_exp00_pilot(subID)` retain the small-pool
+pilot; calls with `RUN_exp00_pilot(subID, sessionPlanCsv)` run the saved plan.
 
 ## Known Limitations and Required Validation
 

@@ -1,4 +1,4 @@
-function RUN_exp00_pilot(subID)
+function RUN_exp00_pilot(subID, sessionPlanFile)
 % RUN_exp00_pilot
 %
 % exp_00: the deliberately tiny pilot. Per trial:
@@ -48,6 +48,13 @@ try
         subID = input('Participant: ', 's');
     else
         subID = char(subID);
+    end
+    useSessionPlan = nargin >= 2 && ~isempty(sessionPlanFile);
+    if useSessionPlan
+        sessionPlanFile = char(sessionPlanFile);
+        if ~exist(sessionPlanFile, 'file')
+            error('exp00:missingPlan', 'Session plan not found: %s', sessionPlanFile);
+        end
     end
     if ~any(strcmpi(subID, cclab.allowedParticipants))
         error('Participant must be one of: %s', strjoin(cclab.allowedParticipants, ', '));
@@ -135,10 +142,33 @@ try
     rewardImgPix  = round(ppd * cclab.rewardImageDimDeg);
     dstRectReward = CenterRectOnPointd([0 0 rewardImgPix rewardImgPix], centerX, centerY);
 
-    %% 6) Load the 4-video pool and open each movie once
-    poolT = readtable(cclab.poolFile, 'TextType', 'string');
+    %% 6) Load the pilot pool or a precomputed full-session plan
+    if useSessionPlan
+        sessionPlan = readtable(sessionPlanFile, 'TextType', 'string');
+        requiredPlanColumns = {'Epoch','TrialInEpoch','TrialNum','Condition', ...
+            'VideoA','VideoB','CategoryA','CategoryB','StartA_s','StartB_s'};
+        if ~all(ismember(requiredPlanColumns, sessionPlan.Properties.VariableNames))
+            error('exp00:invalidPlan', 'Session plan is missing required columns.');
+        end
+        if height(sessionPlan) ~= 180 || ~isequal(sessionPlan.TrialNum', 1:180)
+            error('exp00:invalidPlan', 'Session plan must contain TrialNum 1 through 180 exactly once.');
+        end
+        planVideos = [sessionPlan.VideoA; sessionPlan.VideoB];
+        planCategories = [sessionPlan.CategoryA; sessionPlan.CategoryB];
+        planStarts = [sessionPlan.StartA_s; sessionPlan.StartB_s];
+        [planVideos, firstIndex] = unique(planVideos, 'stable');
+        poolT = table(planVideos, planCategories(firstIndex), planStarts(firstIndex), ...
+            repmat(cclab.perClipSeconds, numel(planVideos), 1), ...
+            'VariableNames', {'filename','category','start_s','shot_dur_s'});
+        cclab.nTrials = height(sessionPlan);
+        fprintf('\n--- exp_00 planned session (%d trials, %d source videos) ---\n', ...
+            cclab.nTrials, height(poolT));
+        fprintf('Plan: %s\n', sessionPlanFile);
+    else
+        poolT = readtable(cclab.poolFile, 'TextType', 'string');
+        fprintf('\n--- exp_00 pilot pool (%d videos) ---\n', height(poolT));
+    end
     nPool = height(poolT);
-    fprintf('\n--- exp_00 pilot pool (%d videos) ---\n', nPool);
     for i = 1:nPool
         fprintf('  %-20s %-14s starts at %4.2fs (natural shot, %.1fs long)\n', ...
             poolT.filename(i), poolT.category(i), poolT.start_s(i), poolT.shot_dur_s(i));
@@ -231,6 +261,9 @@ try
     if ~exist(outFolder, 'dir'), mkdir(outFolder); end
     outMat = fullfile(outFolder, [subID '_' datestr(now,'yyyy-mm-dd_HHMM') '.mat']);
     eventLog = fullfile(outFolder, 'event_log.csv');
+    if useSessionPlan
+        copyfile(sessionPlanFile, fullfile(outFolder, 'session_plan.csv'));
+    end
 
     Results = table( ...
         'Size', [0 17], ...
@@ -388,12 +421,22 @@ try
 
             % -----------------------------------------------------------------
             case "Select_and_play"
-                % Pick 2 DISTINCT videos from the pool, live, per trial.
-                pickIdx = randperm(nPool, 2);
-                nameA = poolNames{pickIdx(1)};
-                nameB = poolNames{pickIdx(2)};
+                if useSessionPlan
+                    planRow = sessionPlan(total_trials, :);
+                    nameA = char(planRow.VideoA);
+                    nameB = char(planRow.VideoB);
+                else
+                    % Pick 2 DISTINCT videos from the pilot pool, live, per trial.
+                    pickIdx = randperm(nPool, 2);
+                    nameA = poolNames{pickIdx(1)};
+                    nameB = poolNames{pickIdx(2)};
+                end
                 mA = movieMap(nameA);
                 mB = movieMap(nameB);
+                if useSessionPlan
+                    mA.startS = planRow.StartA_s;
+                    mB.startS = planRow.StartB_s;
+                end
                 sameCategory = strcmp(mA.category, mB.category);
                 activeTrial.Phase = "Select_and_play";
                 activeTrial.VideoA = string(nameA);

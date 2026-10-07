@@ -13,7 +13,7 @@ Use this text as the operator email/run sheet. The experiment always writes a co
 
 ## Start The Task
 
-1. Run `2_Run_Experiment.cmd`.
+1. Run `2_Run_Experiment.cmd`. It generates and saves the full 180-trial plan, then copies any missing planned videos before opening the task.
 2. Enter participant, experimenter/developer, rig profile, eye-tracking mode, neural-I/O mode, reward duration, and archive destination in the Command Prompt.
 3. MATLAB starts with cleared variables/functions and prints the participant, operator, reward duration, and controls before opening the task window.
 4. Verify the Command Prompt transcript is being written under the local run folder.

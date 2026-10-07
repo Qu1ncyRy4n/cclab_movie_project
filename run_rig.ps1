@@ -41,6 +41,7 @@ param(
     [int]$RewardMs = 400,
     [switch]$Setup,
     [switch]$RunExperiment,
+    [switch]$FullSession,
     [switch]$SkipBench,
     [switch]$DryRun
 )
@@ -128,6 +129,23 @@ function Copy-PilotVideos([string]$PoolCsv, [string]$Source, [string]$Destinatio
     Write-Host "$(@($pool).Count) pilot videos in $destinationDir"
 }
 
+function Copy-PlanVideos([string]$PlanCsv, [string]$Source, [string]$Destination) {
+    $sourceDir = Join-Path $Source 'video_all'
+    $destinationDir = Join-Path $Destination 'video_all'
+    New-Item -ItemType Directory -Force -Path $destinationDir | Out-Null
+    $plan = Import-Csv -LiteralPath $PlanCsv
+    $videos = @($plan | ForEach-Object { $_.VideoA; $_.VideoB } | Sort-Object -Unique)
+    foreach ($video in $videos) {
+        $target = Join-Path $destinationDir $video
+        if (Test-Path -LiteralPath $target) { Write-Host "  present  $video"; continue }
+        $sourceFile = Join-Path $sourceDir $video
+        Require-Path $sourceFile 'Planned session video on the NAS'
+        Copy-Item -LiteralPath $sourceFile -Destination $target
+        Write-Host "  copied   $video"
+    }
+    Write-Host "$($videos.Count) planned videos available in $destinationDir"
+}
+
 function Get-OrInstall-UV {
     $uvCommand = Get-Command uv -ErrorAction SilentlyContinue
     if ($uvCommand) { return $uvCommand }
@@ -165,6 +183,9 @@ if ($RunExperiment -and -not $SubjectId) {
 }
 if ($RunExperiment -and -not $Experimenter) {
     throw '-Experimenter is required with -RunExperiment.'
+}
+if ($FullSession -and -not $RunExperiment) {
+    throw '-FullSession requires -RunExperiment.'
 }
 if (-not $DryRun) {
     Require-Path $RigConfig 'Rig configuration'
@@ -224,6 +245,7 @@ try {
         computer_profile = $ComputerProfile
         participant = $SubjectId
         experimenter = $Experimenter
+        full_session = $FullSession.IsPresent
         eye_tracking = $EyeTracking
         neural_io = $NeuralIO
         bench_dummy = $benchDummy
@@ -289,7 +311,22 @@ try {
     }
     elseif ($RunExperiment) {
         $safeSubjectId = $SubjectId -replace '''', ''''''
-        $experimentCommand = "clearvars; clear functions; addpath(genpath('$($sourceExperimentDir -replace '''', '''''')')); cd('$($experimentDir -replace '''', '''''')'); RUN_exp00_pilot('$safeSubjectId');"
+        if ($FullSession) {
+            $planDir = Join-Path $experimentDir 'session_plan'
+            $safePlanDir = $planDir -replace '''', ''''''
+            $prepareCommand = "clearvars; clear functions; addpath(genpath('$($sourceExperimentDir -replace '''', '''''')')); PREPARE_exp00_session_plan('$safePlanDir');"
+            Invoke-Checked 'Generate reproducible 180-trial session plan' { & $matlab.Source -batch $prepareCommand }
+            $planCsv = Join-Path $planDir 'session_plan.csv'
+            Require-Path $planCsv 'Generated session plan'
+            if ($VideoSource -eq 'local') {
+                Invoke-Checked "Copy planned videos to $LocalVideoRoot" { Copy-PlanVideos $planCsv $NasVideoRoot $LocalVideoRoot; $global:LASTEXITCODE = 0 }
+            }
+            $safePlanCsv = $planCsv -replace '''', ''''''
+            $experimentCommand = "clearvars; clear functions; addpath(genpath('$($sourceExperimentDir -replace '''', '''''')')); cd('$($experimentDir -replace '''', '''''')'); RUN_exp00_pilot('$safeSubjectId', '$safePlanCsv');"
+        }
+        else {
+            $experimentCommand = "clearvars; clear functions; addpath(genpath('$($sourceExperimentDir -replace '''', '''''')')); cd('$($experimentDir -replace '''', '''''')'); RUN_exp00_pilot('$safeSubjectId');"
+        }
         Invoke-Checked 'exp_00 MATLAB pilot' { & $matlab.Source -batch $experimentCommand }
     }
 
