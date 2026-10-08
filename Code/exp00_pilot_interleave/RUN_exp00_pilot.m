@@ -464,8 +464,13 @@ try
                     activeTrial.Phase = "SegmentA";
                     activeTrial.Segment = si;
                     saveCheckpoint(outMat, Results, cclab, activeTrial);
-                    [aborted, exitConfirmed, forcedPause, diag] = playOneSegment(window, mA, segStartA, cclab.segDur, ...
-                        total_trials, si, 'A', useRealEyelink, useNeuralIO, escKey, forcePauseKey, cclab.ttlPulseMs, eventLog);
+                    [aborted, exitConfirmed, forcedPause, segmentPauseRequested, diag] = playOneSegment(window, mA, segStartA, cclab.segDur, ...
+                        total_trials, si, 'A', useRealEyelink, useNeuralIO, escKey, pauseKey, forcePauseKey, cclab.ttlPulseMs, eventLog);
+                    if segmentPauseRequested && ~pauseRequested
+                        pauseRequested = true;
+                        appendEvent(eventLog, 'PauseRequested', total_trials, si, 'during_movie');
+                        fprintf('Pause requested during trial %d. The task will pause after this trial saves.\n', total_trials);
+                    end
                     diag.TrialNum = total_trials; diag.Segment = si; diag.Movie = 'A';
                     segmentDiagnostics(end+1) = diag; %#ok<AGROW>
                     if exitConfirmed
@@ -478,8 +483,13 @@ try
                     activeTrial.Phase = "SegmentB";
                     activeTrial.Segment = si;
                     saveCheckpoint(outMat, Results, cclab, activeTrial);
-                    [aborted, exitConfirmed, forcedPause, diag] = playOneSegment(window, mB, segStartB, cclab.segDur, ...
-                        total_trials, si, 'B', useRealEyelink, useNeuralIO, escKey, forcePauseKey, cclab.ttlPulseMs, eventLog);
+                    [aborted, exitConfirmed, forcedPause, segmentPauseRequested, diag] = playOneSegment(window, mB, segStartB, cclab.segDur, ...
+                        total_trials, si, 'B', useRealEyelink, useNeuralIO, escKey, pauseKey, forcePauseKey, cclab.ttlPulseMs, eventLog);
+                    if segmentPauseRequested && ~pauseRequested
+                        pauseRequested = true;
+                        appendEvent(eventLog, 'PauseRequested', total_trials, si, 'during_movie');
+                        fprintf('Pause requested during trial %d. The task will pause after this trial saves.\n', total_trials);
+                    end
                     diag.TrialNum = total_trials; diag.Segment = si; diag.Movie = 'B';
                     segmentDiagnostics(end+1) = diag; %#ok<AGROW>
                     if exitConfirmed
@@ -718,12 +728,13 @@ end
 end
 
 % ---------------------------------------------------------------------------
-function [aborted, exitConfirmed, forcedPause, diag] = playOneSegment(window, m, segStart, segDur, trialNum, segIdx, which, useRealEyelink, useNeuralIO, escKey, forcePauseKey, ttlPulseMs, eventLog)
+function [aborted, exitConfirmed, forcedPause, pauseRequested, diag] = playOneSegment(window, m, segStart, segDur, trialNum, segIdx, which, useRealEyelink, useNeuralIO, escKey, pauseKey, forcePauseKey, ttlPulseMs, eventLog)
 % Seek m to segStart, play for segDur, draw every frame. Returns true if
 % ESC was pressed mid-segment.
 aborted = false;
 exitConfirmed = false;
 forcedPause = false;
+pauseRequested = false;
 diag = struct('TrialNum', NaN, 'Segment', NaN, 'Movie', '', ...
     'SeekToFirstFrame_ms', NaN, 'MovieFrames', 0, 'MissedFlips', 0, ...
     'MeanFrameInterval_ms', NaN, 'MaxFrameInterval_ms', NaN);
@@ -791,6 +802,8 @@ while (GetSecs - segT0) < segDur
         aborted = true;
         forcedPause = true;
         break
+    elseif keyCode(pauseKey)
+        pauseRequested = true;
     end
 end
 
