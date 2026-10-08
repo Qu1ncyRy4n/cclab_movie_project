@@ -49,7 +49,7 @@ mkdir -p "$DESTINATION/cclab_movie_project" "$DESTINATION/mat_vs_py_bench"
 EXCLUDES=(
     --exclude .git --exclude .venv --exclude .direnv --exclude __pycache__
     # Pilot recordings and other run outputs remain local to the rig.
-    --exclude .DS_Store --exclude '/data/***' --exclude '/results/***' --exclude 'Output_*'
+    --exclude .DS_Store --exclude 'data/***' --exclude 'results/***' --exclude 'Output_*'
 )
 rsync -a --delete "${EXCLUDES[@]}" "$MOVIE/" "$DESTINATION/cclab_movie_project/"
 rsync -a --delete "${EXCLUDES[@]}" "$BENCH/" "$DESTINATION/mat_vs_py_bench/"
