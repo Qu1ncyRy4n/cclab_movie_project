@@ -8,6 +8,7 @@ paths.cfg
 .ipynb_checkpoints/
 Data/Pilot data/*/*.asc
 Data/Pilot data/*/results.csv
+Data/Pilot data/*
 *.asv
 __pycache__/
 *.pyc
