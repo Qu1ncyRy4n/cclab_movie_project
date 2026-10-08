@@ -273,7 +273,10 @@ try
         'VariableNames', {'TrialNum','VideoA','CategoryA','VideoB','CategoryB','SameCategory', ...
                           'SegDur_s','TimesShownBeforeA','TimesShownBeforeB', ...
                           'FixAcquired_ms','InterleaveOff_ms','RewardOn_ms','AbortPhase', ...
-                           'TrialSuccess','RewardSize','Participant','Experimenter'});
+                            'TrialSuccess','RewardSize','Participant','Experimenter'});
+    segmentDiagnostics = struct('TrialNum', {}, 'Segment', {}, 'Movie', {}, ...
+        'SeekToFirstFrame_ms', {}, 'MovieFrames', {}, 'MissedFlips', {}, ...
+        'MeanFrameInterval_ms', {}, 'MaxFrameInterval_ms', {});
 
     total_success = 0;
     total_trials  = 0;
@@ -461,8 +464,10 @@ try
                     activeTrial.Phase = "SegmentA";
                     activeTrial.Segment = si;
                     saveCheckpoint(outMat, Results, cclab, activeTrial);
-                    [aborted, exitConfirmed, forcedPause] = playOneSegment(window, mA, segStartA, cclab.segDur, ...
+                    [aborted, exitConfirmed, forcedPause, diag] = playOneSegment(window, mA, segStartA, cclab.segDur, ...
                         total_trials, si, 'A', useRealEyelink, useNeuralIO, escKey, forcePauseKey, cclab.ttlPulseMs, eventLog);
+                    diag.TrialNum = total_trials; diag.Segment = si; diag.Movie = 'A';
+                    segmentDiagnostics(end+1) = diag; %#ok<AGROW>
                     if exitConfirmed
                         activeTrial.Phase = "ExitConfirmed";
                         saveCheckpoint(outMat, Results, cclab, activeTrial);
@@ -473,8 +478,10 @@ try
                     activeTrial.Phase = "SegmentB";
                     activeTrial.Segment = si;
                     saveCheckpoint(outMat, Results, cclab, activeTrial);
-                    [aborted, exitConfirmed, forcedPause] = playOneSegment(window, mB, segStartB, cclab.segDur, ...
+                    [aborted, exitConfirmed, forcedPause, diag] = playOneSegment(window, mB, segStartB, cclab.segDur, ...
                         total_trials, si, 'B', useRealEyelink, useNeuralIO, escKey, forcePauseKey, cclab.ttlPulseMs, eventLog);
+                    diag.TrialNum = total_trials; diag.Segment = si; diag.Movie = 'B';
+                    segmentDiagnostics(end+1) = diag; %#ok<AGROW>
                     if exitConfirmed
                         activeTrial.Phase = "ExitConfirmed";
                         saveCheckpoint(outMat, Results, cclab, activeTrial);
@@ -620,6 +627,9 @@ try
     end
 
     %% Close movies
+    if ~isempty(segmentDiagnostics)
+        writetable(struct2table(segmentDiagnostics), fullfile(outFolder, 'segment_diagnostics.csv'));
+    end
     appendEvent(eventLog, 'SessionEnd', total_trials, NaN, sprintf('successes=%d', total_success));
     saveCheckpoint(outMat, Results, cclab, activeTrial);
     closeAllMovies(movieMap);
@@ -708,17 +718,24 @@ end
 end
 
 % ---------------------------------------------------------------------------
-function [aborted, exitConfirmed, forcedPause] = playOneSegment(window, m, segStart, segDur, trialNum, segIdx, which, useRealEyelink, useNeuralIO, escKey, forcePauseKey, ttlPulseMs, eventLog)
+function [aborted, exitConfirmed, forcedPause, diag] = playOneSegment(window, m, segStart, segDur, trialNum, segIdx, which, useRealEyelink, useNeuralIO, escKey, forcePauseKey, ttlPulseMs, eventLog)
 % Seek m to segStart, play for segDur, draw every frame. Returns true if
 % ESC was pressed mid-segment.
 aborted = false;
 exitConfirmed = false;
 forcedPause = false;
+diag = struct('TrialNum', NaN, 'Segment', NaN, 'Movie', '', ...
+    'SeekToFirstFrame_ms', NaN, 'MovieFrames', 0, 'MissedFlips', 0, ...
+    'MeanFrameInterval_ms', NaN, 'MaxFrameInterval_ms', NaN);
+seekStart = GetSecs;
 Screen('SetMovieTimeIndex', m.ptr, segStart);
 Screen('PlayMovie', m.ptr, 1);
 
 segOnMarked = false;
 segT0 = GetSecs;
+lastFlipTime = NaN;
+frameIntervalSum = 0;
+frameIntervalCount = 0;
 while (GetSecs - segT0) < segDur
     tex = Screen('GetMovieImage', window, m.ptr);
     if tex < 0, break; end
@@ -728,8 +745,21 @@ while (GetSecs - segT0) < segDur
     end
 
     Screen('DrawTexture', window, tex, [], m.rect);
-    flipTime = Screen('Flip', window);
+    [flipTime, ~, ~, missed] = Screen('Flip', window);
     Screen('Close', tex);
+    diag.MovieFrames = diag.MovieFrames + 1;
+    diag.MissedFlips = diag.MissedFlips + double(missed ~= 0);
+    if isnan(lastFlipTime)
+        diag.SeekToFirstFrame_ms = 1000 * (flipTime - seekStart);
+    else
+        frameInterval_ms = 1000 * (flipTime - lastFlipTime);
+        frameIntervalSum = frameIntervalSum + frameInterval_ms;
+        frameIntervalCount = frameIntervalCount + 1;
+        if isnan(diag.MaxFrameInterval_ms) || frameInterval_ms > diag.MaxFrameInterval_ms
+            diag.MaxFrameInterval_ms = frameInterval_ms;
+        end
+    end
+    lastFlipTime = flipTime;
 
     if ~segOnMarked
         if useRealEyelink
@@ -762,6 +792,10 @@ while (GetSecs - segT0) < segDur
         forcedPause = true;
         break
     end
+end
+
+if frameIntervalCount > 0
+    diag.MeanFrameInterval_ms = frameIntervalSum / frameIntervalCount;
 end
 
 Screen('PlayMovie', m.ptr, 0);
