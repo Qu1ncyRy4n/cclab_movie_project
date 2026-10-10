@@ -34,11 +34,11 @@ while IFS=, read -r video category start_s end_s; do
         printf 'VLC returned a nonzero status; review the displayed window and continue.\n' >&2
 
     while true; do
-        read -r -p 'Result: [p]ass, [r]eject, [s]kip, or [q]uit: ' response
+        read -r -p 'Result: [p]ass, [r]eject, [s]kip, or [q]uit: ' response < /dev/tty
         response="${response,,}"
         case "$response" in
             p) status='PASS'; note=''; break ;;
-            r) status='REJECT'; read -r -p 'Brief rejection reason: ' note; break ;;
+            r) status='REJECT'; read -r -p 'Brief rejection reason: ' note < /dev/tty; break ;;
             s) status='SKIP'; note=''; break ;;
             q) printf 'Review saved: %s\n' "$review_file"; exit 0 ;;
         esac
