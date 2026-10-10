@@ -28,7 +28,10 @@ while IFS=, read -r video category start_s end_s; do
     [[ -f "$video_file" ]] || { printf 'Video not found: %s\n' "$video_file" >&2; exit 1; }
     duration="$(bc -l <<< "$end_s - $start_s")"
     printf '\n%s: %s, %s to %s s\n' "$category" "$video" "$start_s" "$end_s"
-    "$vlc" "--start-time=$start_s" "--run-time=$duration" --play-and-exit --no-video-title-show "$video_file"
+    # VLC may return a nonzero status after normal end-of-playlist on macOS.
+    # The operator, not VLC's exit code, determines QC status.
+    "$vlc" "--start-time=$start_s" "--run-time=$duration" --play-and-exit --no-video-title-show "$video_file" || \
+        printf 'VLC returned a nonzero status; review the displayed window and continue.\n' >&2
 
     while true; do
         read -r -p 'Result: [p]ass, [r]eject, [s]kip, or [q]uit: ' response
