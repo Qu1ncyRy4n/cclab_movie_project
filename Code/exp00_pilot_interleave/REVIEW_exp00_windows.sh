@@ -30,7 +30,7 @@ while IFS=, read -r video category start_s end_s; do
     printf '\n%s: %s, %s to %s s\n' "$category" "$video" "$start_s" "$end_s"
     # VLC may return a nonzero status after normal end-of-playlist on macOS.
     # The operator, not VLC's exit code, determines QC status.
-    "$vlc" "--start-time=$start_s" "--run-time=$duration" --play-and-exit --no-video-title-show "$video_file" || \
+    "$vlc" "--start-time=$start_s" "--run-time=$duration" --play-and-exit --no-video-title-show "$video_file" < /dev/null || \
         printf 'VLC returned a nonzero status; review the displayed window and continue.\n' >&2
 
     while true; do
