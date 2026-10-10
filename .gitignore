@@ -1,6 +1,7 @@
 .DS_Store
 Output_freeviewingTraining/
 Code/exp00_pilot_interleave/Output_exp00_pilot/
+Code/exp00_pilot_interleave/Output_exp00_session_plan/
 Code/exp01_transitions/Output_exp01_transitions/
 psychopy_pilot/Output_exp00_pilot/
 paths.cfg
