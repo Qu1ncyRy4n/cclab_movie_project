@@ -16,6 +16,7 @@ if [[ ! -f "$review_file" ]]; then
     printf 'Video,Category,Start_s,End_s,Status,Notes\n' > "$review_file"
 fi
 
+has_skipped=0
 while IFS=, read -r video category start_s end_s; do
     [[ "$video" == 'Video' ]] && continue
     [[ -n "$video" ]] || continue
@@ -39,8 +40,9 @@ while IFS=, read -r video category start_s end_s; do
         case "$response" in
             p) status='PASS'; note=''; break ;;
             r) status='REJECT'; read -r -p 'Brief rejection reason: ' note < /dev/tty; break ;;
-            s) status='SKIP'; note=''; break ;;
-            q) printf 'Review saved: %s\n' "$review_file"; exit 0 ;;
+            s) status='SKIP'; note=''; has_skipped=1; break ;;
+            # Exit 2 lets the curation wrapper retain this candidate unchanged.
+            q) printf 'Review saved: %s\n' "$review_file"; exit 2 ;;
         esac
     done
     note="${note//\"/\"\"}"
@@ -48,3 +50,6 @@ while IFS=, read -r video category start_s end_s; do
 done < "$qc_csv"
 
 printf 'Review saved: %s\n' "$review_file"
+if [[ "$has_skipped" == 1 ]]; then
+    exit 3
+fi
