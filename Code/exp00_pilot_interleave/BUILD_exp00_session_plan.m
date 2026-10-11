@@ -148,8 +148,10 @@ here = fileparts(mfilename('fullpath')); root = fileparts(fileparts(here)); data
 manifest = readtable(fullfile(data, 'MANIFEST.csv'), 'TextType', 'string');
 durations = readtable(fullfile(data, 'durations.csv'), 'TextType', 'string');
 cuts = readtable(fullfile(data, 'cuts.csv'), 'TextType', 'string');
-nature = eligible(manifest, durations, cuts, manifest.video_nature == 1, "nature", design, design.excludedNature);
-social = eligible(manifest, durations, cuts, manifest.video_social_undir == 1, "social", design, design.excludedSocial);
+history = readtable(fullfile(here, 'approved_source_history.csv'), 'TextType', 'string');
+previouslyApproved = string(history.Video);
+nature = eligible(manifest, durations, cuts, manifest.video_nature == 1, "nature", design, [design.excludedNature; previouslyApproved]);
+social = eligible(manifest, durations, cuts, manifest.video_social_undir == 1, "social", design, [design.excludedSocial; previouslyApproved]);
 end
 
 function sources = eligible(manifest, durations, cutsTable, mask, category, design, excluded)
