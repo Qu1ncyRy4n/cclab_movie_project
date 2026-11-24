@@ -5,6 +5,154 @@ person) can continue without the conversation that produced it.
 
 ---
 
+## 2026-10-26 13:53 — next: data validation / sanity checks for exp00
+
+Since 09-24, exp00 moved from dummy-mode testing to real data. Session plans
+are locked, curation is done (commits through 2026-10-11), and there is one
+full session:
+
+- **Vennie 2026-10-07** — `Data/Pilot data/2026-10-07_130943_exp/`. 180/180
+  trials ran and all 180 succeeded. EDF (101 MB), `.mat`, `event_log.csv`,
+  `session_plan.csv`. The plan copy in `Output/` is byte-identical to the one
+  in `session_plan/`.
+- **2026-10-05_165406_exp** — a short 9-trial run in
+  `~/dev/research/data/`. This is the default `RUN_ID` in
+  `data_analysis/validate_exp00_run.ipynb`.
+- The existing notebook only checks that files exist, prints summary means,
+  and counts EDF sample gaps. It does not validate the data.
+
+Two things looked suspicious:
+- The transcript reports **14,234 of 67,750 flips missed their deadline
+  (21%)**.
+- ~~180 `Reward` events vs 179 successes~~ — false alarm: "success so far=179"
+  in the transcript is printed *before* trial 180 runs.
+
+### 2026-10-27 — results for checks 12, 5, 8, 1 (Vennie 10-07)
+
+Script: `data_analysis/qc_exp00.py <run_dir>`. It is stdlib only, takes
+about 2 s, writes `derived/qc_report.json`, and exits 1 on a hard failure.
+Before running it, `derived/trials_from_mat.csv` has to come from MATLAB
+(`/Applications/MATLAB_R2025a.app/bin/matlab -batch`, see notebook) and the
+`.asc` from `edf2asc -y`. **All hard checks pass.**
+
+- **12 — track loss:** 3.9% of samples are lost across the whole file. The
+  median per trial during movies is 1.2%, max 8.6%; no trial exceeds 20%.
+  Loss rises slightly over the session (1.3% → 1.8%). 1,097 blinks.
+  Confirmed the notebook bug: its regex skipped all 142,305 lost-sample
+  lines. Fix the notebook or retire it in favour of the script.
+- **5 — counts and order:** EDF, `event_log` and Results agree exactly: 180
+  trials, 1080 SegOn/Off, 180 rewards, and `SessionEnd successes=180`.
+  Every trial has segments in order (1A,1B,2A,2B,3A,3B) in both EDF and
+  `event_log`, with FixInFP before the movie. FixInFP fires 1–38× per trial
+  (145 trials once), i.e. fixation re-acquired after breaks.
+- **8 — timing:** segment *durations* are fine: median 2009 ms, range
+  1999–2026, none off by more than 100 ms. **The problem is the gap between
+  segments.** SegOff→next SegOn has a median of 333 ms (range 99–733), so
+  trials last 13.5 s instead of 12 s. During that gap the previous movie's
+  last frame stays frozen on screen. This is a stimulus confound at every
+  A↔B switch. Gap ≈ **88 ms + 86 ms per second the target sits past the
+  previous keyframe** (r = 0.77, n = 900). The pattern looks the same
+  across videos; the cause is keyframe distance.
+  - That slope is indirect evidence that **seeks are accurate**: the decoder
+    rolls forward to the exact target and does not snap to a keyframe.
+    `test_seek` is still the proof.
+  - Fix: dense keyframes (step 3 below, `-g 25`) should cap the gap near
+    ~90–130 ms everywhere. Alternatively, draw a gray/fixation frame during
+    the seek so the frozen frame is at least deliberate. The 10-08
+    `SeekToFirstFrame_ms` diagnostic postdates this run, so the next session
+    will log it directly.
+- **1 — plan fidelity:** 0 mismatches. Plan, Results and `PairSelected`
+  agree on videos, categories, SameCategory and Condition for every
+  trial, and TimesShownBeforeA/B matches a recount. Design: NN/NS/SS 60
+  each, 36 videos shown exactly 10× each. Start_s cannot be verified from
+  the data because the actual seek position isn't logged.
+
+Not applicable: the 10-05 run predates `event_log.csv`/plans, so the script
+doesn't run on it.
+
+**Decision 2026-10-27: switch-gap fix DEFERRED.** We analyze the data as
+collected. Consequences for analysis:
+- Treat each SegOff→SegOn gap (99–733 ms, frozen last frame of the
+  previous movie) as its own epoch. Don't pool it with either movie's
+  segment, and use EDF SegOn/SegOff as the true boundaries, not the
+  nominal 2 s grid.
+- Gap length is confounded with segment index (seg 1 ≈ 125 ms, seg 3
+  ≈ 400 ms). Check any effect by segment position against this before
+  interpreting it.
+- Revisit (re-encode with `-g 25` or add a gray frame) before any new
+  collection.
+
+**Next:** neural preprocessing — see `docs/PREPROCESSING.md` (waiting on
+the NAS and on Brinda's probe config). Then `test_seek`, then checks 13–16 (calibration: the ASC has `!CAL` points but
+no VALIDATE result lines, so calibration may never have been validated).
+
+**Plan.** Make the notebook driven by `RUN_ID`, put an assert on each
+check, write `derived/qc_report.json`, and move the parsing into one small
+`qc_exp00.py`. Run it on Vennie 10-07 first, then 10-05.
+
+**A. Did the plan get executed?**
+1. Each trial matches its row in `session_plan.csv`: VideoA/B, Condition
+   and StartA_s/StartB_s, checked against Results and the `PairSelected`
+   lines in `event_log`.
+2. The hash of the plan that ran matches `approved_session_plan_metadata.json`.
+3. Design balance in what actually played: counts per Condition and per
+   video, the PairRepetition distribution, and TimesShownBeforeA/B
+   recounted from the plan.
+4. Start_s + 6 s ≤ the duration in `durations.csv`. Optionally flag clip
+   windows that straddle a cut in `cuts.csv`.
+
+**B. Do the three event streams (EDF, `event_log`, Results) agree?**
+5. Event counts match: 180 TrialStart, 1080 SegOn/Off (6 per trial), and
+   Reward only on successful trials. Explain the extra Reward.
+6. Event order within each trial: TrialStart → FixInFP → Seg1A → Seg1B → … →
+   Seg3B → Reward. No missing or duplicated segments, and A/B alternation
+   matches the design.
+7. Clocks agree: regressing EDF message times against Results timestamps
+   gives a slope of about 1 with small residuals.
+
+**C. Was the timing right?**
+8. SegOff − SegOn ≈ 2.000 s. Plot the distribution per trial and per video,
+   and check whether the 21% flip misses cluster on particular videos or
+   seek points.
+9. A→B switch latency, and the cumulative interleave length against the
+   12 s nominal.
+10. ITI ≈ 2 s and reward image ≈ 1 s.
+11. Seek accuracy (`test_seek`, see "Do these next" step 1 below) is
+    **still unchecked**. If seeks snap to keyframes, StartB is wrong with no
+    error raised. Settle this before trusting check 1.
+
+**D. Is the eye data usable?**
+12. **The notebook's loss check can never fail.** In ASC files, lost samples
+    are written as `.`, and the sample regex skips those lines, so
+    `missing_x_or_y` is always 0. Parse `.` as NaN and also count
+    EFIX/ESACC/EBLINK events.
+13. Track loss and blinks per trial during movie playback, and over the
+    session (to see fatigue). Set a threshold for excluding trials.
+14. Calibration: read the CAL/VALIDATE lines (average and max error). Check
+    that DISPLAY_COORDS matches the screen resolution, and that gaze falls
+    mostly on the movie rectangle.
+15. Gaze is inside the fixation window just before FixInFP. Main-sequence
+    plot (saccade amplitude vs. peak velocity) and fixation-duration
+    histogram.
+16. Read the sample rate from the RECCFG line instead of hardcoding
+    gap > 2 ms.
+
+**E. Hardware and edge cases**
+17. TTLs: 2 lines per segment edge in the transcript. Count them. Neural
+    alignment waits on the export, and Brinda still needs to confirm that
+    the Neuropixel side tolerates the pulse density (see loose ends).
+18. Reward count against TrialSuccess, and RewardSize constant at 400 ms.
+19. The one unsuccessful trial: check its AbortPhase, that it got no reward,
+    and whether it has partial segments. Also check pause/F-abort lines in
+    the transcript, and that nothing from
+    `Output_exp00_pilot/crash_2026-10-05_1508` leaked into analysis.
+20. Metadata is consistent with the folder name. Check that the local video
+    copy matches the NAS (count + checksum).
+
+**Do first:** 12, 5, 8, 1. These are the most likely to find real problems.
+
+---
+
 ## 2026-09-24 — pivot: exp_00, a deliberately tiny pilot, built alongside exp_01
 
 Everything below this point is still accurate for `exp_01_transitions` and
