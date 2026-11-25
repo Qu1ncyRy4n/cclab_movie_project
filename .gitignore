@@ -20,3 +20,5 @@ video_ebm_dataset/video_social_directed/
 video_ebm_dataset/video_social_undir/
 video_ebm_dataset/video_boundary/
 video_ebm_dataset/video_clipped/
+
+.venv/

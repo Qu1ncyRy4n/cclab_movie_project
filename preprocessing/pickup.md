@@ -12,6 +12,24 @@ Surveyed 2026-11-18; data table, next steps and repo state corrected 2026-11-23.
 - The five sort folders were copied to the NAS next to their recordings as `kilosort4` (10-09: as
   `kilosort4_20261124`, beside the lab's own 11-04 sort). Local copies remain on `D:` for Phy.
 
+## 2026-11-25, afternoon: first PSTHs
+
+- `exp00_psth_explore.py` (a `# %%` file, one cell per figure) makes PSTHs for all four sessions from the
+  overnight sorts. Every session and group of sites shows responses locked to the segment-on pulse, so sorting
+  and alignment both work. 10-12: FEF 306 units used (122 fire more at trial start, 47 less), SEF 232 (52 more,
+  31 less); p < 0.01 uncorrected, Kilosort "good" units at 0.5 Hz or more, nothing curated.
+- Figures: `D:\Quincy\data\neuropixel\venni\_figures\exp00_psth\`. Segment tables:
+  `<session>\movie\processed\events\segments_exp00.csv`.
+- Timing is written up in [timing.md](timing.md). New facts: about 0.5 s gap between segments; clock alignment
+  by "files start and stop together" is under 1 ms on 10-12, the header method in `exp00_segments.py` is 5 to
+  8 ms off. `exp00_segments.py` and `exp00_psth.py` are superseded by the explore file.
+- This repo now has a uv environment (`pyproject.toml`, `uv.lock`). The nix flakes, `.envrc` and the old
+  kernel files under `.jupyter/` are still present and can be removed once uv is confirmed on the Mac.
+- Pipeline repo, branch `public-prep`: the two MI notebooks and `scripts/catgt/*.bat` were removed.
+- To run on the Mac: [README.md](README.md), "Getting the data onto the Mac".
+- Still open: which block is ACC and which SEF (10-09 to 10-11); eye position is not used yet; Phy curation;
+  a photodiode for true onset times.
+
 ## Pick up here (left off 2026-11-24, evening)
 
 **Done 11-24:**
@@ -53,7 +71,7 @@ defaults; checked 11-25: spike files consistent, spikes present in every minute,
 3. Walk through the sort output in `scratch/explore_1010_KS.py` (spike times, clusters, labels).
 4. Task signals (`nidq`) and the segment table on our own copy:
    `uv run python -m cclab_preproc.exp00_segments <raw\Movie_g0> <...\event_log.csv> <processed\events\segments.csv>`
-   (expect 546 segments, 91 trials), then `exp00_psth` (never run), then Phy.
+   (done 11-25 by `exp00_psth_explore.py`: 546 segments, 91 trials), then Phy.
 
 **Decided 11-24:** channel 191 (flagged unused by SpikeGLX) stays in the sort by default, so nothing is removed
 silently; the two 5-minute tests above were run with it dropped.
